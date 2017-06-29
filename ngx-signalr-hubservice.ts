@@ -168,9 +168,9 @@ export class HubService {
         return this._errorConnecting;
     }
 
-    private initConnection() {
+    private initConnection(url: string) {
         this.hubProxies = {};
-        this.connection = $.hubConnection();
+        this.connection = $.hubConnection(url, { useDefaultPath: false });
         this.connection.logging = false;
         //we have to create the hub proxies and subscribe to events before connecting
         for (var properties of allHubProperties) {
@@ -191,18 +191,18 @@ export class HubService {
      * Connects to the signalr server. Hubs are registered with the connection through
      * the @Hub decorator
      */
-    public connect(attemptReconnects: boolean = false): Observable<boolean> {
-        this.attemptReconnects = true;
-        return this._connect(false);
+    public connect(url: string = '/signalr', attemptReconnects: boolean = false): Observable<boolean> {
+        this.attemptReconnects = attemptReconnects;
+        return this._connect(url, false);
     }
 
-    private _connect(ignoreReconnecting: boolean) {
+    private _connect(url: string, ignoreReconnecting: boolean) {
         //if user calls connect while we're trying to reconnect, just give them that observable
         if (!ignoreReconnecting && this.reconnectingObservable != null) {
             return this.reconnectingObservable;
         }
         if (this.connection === null) {
-            this.initConnection();
+            this.initConnection(url);
         }
         //this.connection.start just returns the connection object, so map it to this.connected when it completes
         return Observable.fromPromise<boolean>(this.connection.start())
@@ -293,7 +293,7 @@ export class HubService {
         this.tryingReconnect = true;
         this.reconnectingObservable = new Subject<boolean>();
         //try to reconnect forever.
-        this._connect(true).subscribe(async (connected: boolean) => {
+        this._connect(this.connection.url, true).subscribe(async (connected: boolean) => {
             if (!connected) {
                 await HubService.delay(1000);
                 this.tryReconnect();

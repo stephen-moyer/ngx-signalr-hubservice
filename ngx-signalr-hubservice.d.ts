@@ -86,13 +86,13 @@ export declare class HubService {
      * Was there an error connecting to the server?
      */
     readonly errorConnecting: boolean;
-    private initConnection();
+    private initConnection(url);
     /**
      * Connects to the signalr server. Hubs are registered with the connection through
      * the @Hub decorator
      */
-    connect(attemptReconnects?: boolean): Observable<boolean>;
-    private _connect(ignoreReconnecting);
+    connect(url?: string, attemptReconnects?: boolean): Observable<boolean>;
+    private _connect(url, ignoreReconnecting);
     /**
      * Disconnects from the signalr server, and pushes out the disconnected event
      */
