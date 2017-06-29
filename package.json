@@ -1,0 +1,37 @@
+{
+  "name": "ngx-signalr-hubservice",
+  "version": "1.0.0",
+  "description": "Makes using signalr in angular 2 easy",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+	"prepublish": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/steveadoo32/ngx-signalr-hubservice.git"
+  },
+  "keywords": [
+    "angular2",
+    "signalr",
+    "aspnet",
+    "hub",
+    "typescript"
+  ],
+  "author": "Stephen Moyer",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/steveadoo32/ngx-signalr-hubservice/issues"
+  },
+  "homepage": "https://github.com/steveadoo32/ngx-signalr-hubservice#readme",
+  "dependencies": {
+    "@angular/core": "^4.0.0",
+    "rxjs": "^5.1.0",
+    "zone.js": "^0.8.4"
+  },
+  "devDependencies": {  
+    "tslint": "~5.3.2",
+    "typescript": "~2.3.3"
+  },
+  "typings": "./ngx-signalr-hubservice.d.ts"
+}
