@@ -2,6 +2,14 @@ import { Component, Injectable, EventEmitter, NgZone } from '@angular/core';
 import { Observable } from 'rxjs/Observable';
 import { Subject } from 'rxjs/Subject';
 
+import 'rxjs/add/observable/of';
+import 'rxjs/add/observable/fromPromise';
+
+import 'rxjs/add/operator/mergeMap';
+import 'rxjs/add/operator/map';
+import 'rxjs/add/operator/catch';
+import 'rxjs/add/operator/do';
+
 declare var $: any;
 declare var Reflect: any;
 
