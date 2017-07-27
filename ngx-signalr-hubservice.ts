@@ -1,14 +1,6 @@
-import { Component, Injectable, EventEmitter } from '@angular/core';
+import { Component, Injectable, EventEmitter, NgZone } from '@angular/core';
 import { Observable } from 'rxjs/Observable';
 import { Subject } from 'rxjs/Subject';
-
-import 'rxjs/add/observable/of';
-import 'rxjs/add/observable/fromPromise';
-
-import 'rxjs/add/operator/mergeMap';
-import 'rxjs/add/operator/map';
-import 'rxjs/add/operator/catch';
-import 'rxjs/add/operator/do';
 
 declare var $: any;
 declare var Reflect: any;
@@ -28,7 +20,10 @@ export type HubProperties = {
     /**
      * The events on this hub to subscribe to
      */
-    subscriptions?: string[]
+    subscriptions?: Array<{
+        eventName: string,
+        functionName: string
+    }>
 };
 
 /**
@@ -78,12 +73,12 @@ export function HubSubscription(eventName?: string) {
     return function (target: Object, // The prototype of the class
         propertyKey: string, // The name of the method
         descriptor: TypedPropertyDescriptor<any>) {
-        let realEventName = eventName;
-        if (!eventName) {
-            realEventName = propertyKey;
-        }
+        eventName = eventName || propertyKey;
         let hubProperties = getOrCreateHubProperties(target, { hubName: null });
-        hubProperties.subscriptions.push(realEventName);
+        hubProperties.subscriptions.push({
+            eventName: eventName,
+            functionName: propertyKey
+        });
     }
 }
 
@@ -167,46 +162,50 @@ export class HubService {
     get errorConnecting() {
         return this._errorConnecting;
     }
-
-    private initConnection(url: string) {
+    
+    private initConnection() {
         this.hubProxies = {};
-        this.connection = $.hubConnection(url, { useDefaultPath: false });
+        this.connection = $.hubConnection();
         this.connection.logging = false;
-        //we have to create the hub proxies and subscribe to events before connecting
-        for (var properties of allHubProperties) {
-            this.hubProxies[properties.hubName] = this.createHubProxy(properties);
+        try {
+            //we have to create the hub proxies and subscribe to events before connecting
+            for (var properties of allHubProperties) {
+                this.hubProxies[properties.hubName] = this.createHubProxy(properties);
+            }
+            for (var deferredRegistration of this.deferredRegistrations) {
+                this.register(deferredRegistration);
+            }
+            this.connection.disconnected(this.disconnectedCallback);
+            this.connection.reconnected(this.reconnectedCallback);
+            this.connection.reconnecting(this.recconectingCallback);
+            this.connection.stateChanged(function (change: any) {
+                this.signalRState = change.newState;
+            });
+        } catch (err) {
+            console.log(err);
         }
-        for (var deferredRegistration of this.deferredRegistrations) {
-            this.register(deferredRegistration);
-        }
-        this.connection.disconnected(this.disconnectedCallback);
-        this.connection.reconnected(this.reconnectedCallback);
-        this.connection.reconnecting(this.recconectingCallback);
-        this.connection.stateChanged(function (change: any) {
-            this.signalRState = change.newState;
-        });
     }
 
     /**
      * Connects to the signalr server. Hubs are registered with the connection through
      * the @Hub decorator
      */
-    public connect(url: string = '/signalr', attemptReconnects: boolean = false): Observable<boolean> {
-        this.attemptReconnects = attemptReconnects;
-        return this._connect(url, false);
+    public connect(attemptReconnects: boolean = false): Observable<boolean> {
+        this.attemptReconnects = true;
+        return this._connect(false);
     }
 
-    private _connect(url: string, ignoreReconnecting: boolean) {
+    private _connect(ignoreReconnecting: boolean) {
         //if user calls connect while we're trying to reconnect, just give them that observable
         if (!ignoreReconnecting && this.reconnectingObservable != null) {
             return this.reconnectingObservable;
         }
         if (this.connection === null) {
-            this.initConnection(url);
+            this.initConnection();
         }
         //this.connection.start just returns the connection object, so map it to this.connected when it completes
         return Observable.fromPromise<boolean>(this.connection.start())
-            .map(() => this.connected)
+            .map(value => this.connected)
             .do(this.connectedCallback)
             .catch(this.connectionErrorCallback);
     }
@@ -216,7 +215,7 @@ export class HubService {
      */
     public disconnect(): Observable<boolean> {
         //this.connection.stop just returns the connection object, so map it to this.connected when it completes
-        return Observable.fromPromise<boolean>(this.connection.stop()).map(() => this.connected);
+        return Observable.fromPromise<boolean>(this.connection.stop()).map(value => this.connected);
     }
 
     /**
@@ -293,7 +292,7 @@ export class HubService {
         this.tryingReconnect = true;
         this.reconnectingObservable = new Subject<boolean>();
         //try to reconnect forever.
-        this._connect(this.connection.url, true).subscribe(async (connected: boolean) => {
+        this._connect(true).subscribe(async connected => {
             if (!connected) {
                 await HubService.delay(1000);
                 this.tryReconnect();
@@ -305,7 +304,7 @@ export class HubService {
     }
 
     private static delay(ms: number): Promise<{}> {
-        return new Promise((resolve: Function) => {
+        return new Promise(resolve => {
             setTimeout(() => resolve(), ms);
         });
     }
@@ -321,7 +320,7 @@ export class HubService {
         let hubContainer = this.hubProxies[hubName];
         if (this.reconnectingObservable != null) {
             //we're reconnecting, so wait on that, then invoke our method
-            return this.reconnectingObservable.flatMap((connected: boolean) => {
+            return this.reconnectingObservable.flatMap(connected => {
                 if (!connected) {
                     return Observable.throw("SignalR disconnected");
                 } else {
@@ -331,7 +330,7 @@ export class HubService {
         } else {
             //were not reconnecting, so try to invoke our method
             return Observable.fromPromise<T>(hubContainer.hubProxy.invoke(method, ...args))
-                .catch((err: any) => {
+                .catch(err => {
                     //we lost connection in the middle of the call? wait for reconnecting and send again then.
                     if (this.reconnectingObservable != null) {
                         return this.invoke(hubName, method, args);
@@ -373,14 +372,14 @@ export class HubService {
 
         for (let subscription of hubProperties.subscriptions) {
             //if the method for this subscription isn't defined skip it
-            if (!(subscription in instance)) {
+            if (!(subscription.functionName in instance)) {
                 console.warn(`${instance} is subscribing to event ${subscription} but has no matching method. Skipping subscription.`);
                 continue;
             }
             //adds a ref to the method on the instance to the list of events for this hub+event pairing
-            this.hubProxies[hubProperties.hubName].events[subscription].push({
+            this.hubProxies[hubProperties.hubName].events[subscription.eventName].push({
                 thisObj: instance,
-                callback: instance[subscription]
+                callback: instance[subscription.functionName]
             });
         }
 
@@ -393,17 +392,17 @@ export class HubService {
      * @param subscription The subscription name(event name)
      * @param args The arguments from the hub
      */
-    private hubMessageReceived(hub: string, subscription: string, args: IArguments) {
+    private hubMessageReceived(hub: string, subscription: { eventName: string, functionName: string }, args: IArguments) {
         if (!(hub in this.hubProxies)) {
             return;
         }
-        let events = this.hubProxies[hub].events[subscription];
+        let events = this.hubProxies[hub].events[subscription.eventName];
         for (let func of events) {
             //wrap all the callbacks in a try/catch so they don't break other callbacks if one fails.
             try {
                 func.callback.apply(func.thisObj, args);
             } catch (err) {
-                console.error(`Hub callback error on hub ${hub} subscription ${subscription}. Error: ${err}`);
+                console.error(`Hub callback error on hub ${hub} subscription ${subscription.eventName}. Error: ${err}`);
             }
         }
     }
@@ -418,14 +417,15 @@ export class HubService {
         let _this_ = this;
         for (let subscription of properties.subscriptions) {
             //don't resubscribe to events.
-            if (subscription in events) {
+            if (subscription.eventName in events) {
                 continue;
             }
-            events[subscription] = [];
+            events[subscription.eventName] = [];
             //this method actually subscribes to the hub function.
             //we only subscribe once then push out the message to all subscribers
-            hubProxy.on(subscription, function () {
+            hubProxy.on(subscription.eventName, function () {
                 //we lose the "this" context with the jquery promise, so we have to store it as _this_.
+                //let args = arguments;
                 _this_.hubMessageReceived(properties.hubName, subscription, arguments);
             });
         }
