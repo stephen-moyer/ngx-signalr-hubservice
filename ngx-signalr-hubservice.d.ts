@@ -1,4 +1,10 @@
 import { Observable } from 'rxjs/Observable';
+import 'rxjs/add/observable/of';
+import 'rxjs/add/observable/fromPromise';
+import 'rxjs/add/operator/mergeMap';
+import 'rxjs/add/operator/map';
+import 'rxjs/add/operator/catch';
+import 'rxjs/add/operator/do';
 /** Properties for the hub you're connecting to. hubName is required */
 export declare type HubProperties = {
     /**
@@ -83,13 +89,13 @@ export declare class HubService {
      * Was there an error connecting to the server?
      */
     readonly errorConnecting: boolean;
-    private initConnection();
+    private initConnection(url);
     /**
      * Connects to the signalr server. Hubs are registered with the connection through
      * the @Hub decorator
      */
-    connect(attemptReconnects?: boolean): Observable<boolean>;
-    private _connect(ignoreReconnecting);
+    connect(url?: string, attemptReconnects?: boolean): Observable<boolean>;
+    private _connect(url, ignoreReconnecting);
     /**
      * Disconnects from the signalr server, and pushes out the disconnected event
      */
