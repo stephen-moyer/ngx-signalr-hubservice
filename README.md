@@ -80,7 +80,7 @@ Makes using signalr hubs easy
 
     }
     ```
-1. Define a method that the hub will call with @HubSubscription in the same class. You can pass in the method name in the decorator, or just leave it blank. If left blank, the service will use the name of the method that you added to decorator to as the subscription name.
+1. Define a method that the hub will call with @HubSubscription in the same class. You can pass in the method name in the decorator, or just leave it blank. If left blank, the service will use the name of the method that you added to decorator to as the subscription name. NOTE: you generally have to run these callbacks inside angular's zone if you're updating UI. Hopefully future versions you won't have to do this.
     ```
     @HubSubscription()
     receiveMessage(param1: any, param2: any) {

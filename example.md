@@ -3,7 +3,7 @@
 Here's an example chat application. Make sure you add the HubService to your app module's providers.
 
 ```
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, NgZone } from '@angular/core';
 import { 
   HubService, 
   Hub, 
@@ -59,7 +59,7 @@ export class AppComponent implements OnInit {
   
   messages = <[ { name: string, message: string } ]> []; 
 
-  constructor(private hubService: HubService) {
+  constructor(private hubService: HubService, private ngZone: NgZone) {
     this.hubWrapper = hubService.register(this);
   }
 
@@ -78,7 +78,10 @@ export class AppComponent implements OnInit {
 
   @HubSubscription()
   receiveMessage(name: string, message: string) {
-    this.messages.push({ name: name, message: message });
+    //run inside zone to update UI
+    this.ngZone.run(() => {
+      this.messages.push({ name: name, message: message });
+    });
   }
 
 }
