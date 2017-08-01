@@ -213,7 +213,7 @@ export class HubService {
         }
         //this.connection.start just returns the connection object, so map it to this.connected when it completes
         return Observable.fromPromise<boolean>(this.connection.start())
-            .map(value => this.connected)
+            .map((value: boolean) => this.connected)
             .do(this.connectedCallback)
             .catch(this.connectionErrorCallback);
     }
@@ -223,7 +223,7 @@ export class HubService {
      */
     public disconnect(): Observable<boolean> {
         //this.connection.stop just returns the connection object, so map it to this.connected when it completes
-        return Observable.fromPromise<boolean>(this.connection.stop()).map(value => this.connected);
+        return Observable.fromPromise<boolean>(this.connection.stop()).map((value: boolean) => this.connected);
     }
 
     /**
@@ -328,7 +328,7 @@ export class HubService {
         let hubContainer = this.hubProxies[hubName];
         if (this.reconnectingObservable != null) {
             //we're reconnecting, so wait on that, then invoke our method
-            return this.reconnectingObservable.asObservable().flatMap(connected => {
+            return this.reconnectingObservable.asObservable().flatMap((connected: boolean) => {
                 if (!connected) {
                     return Observable.throw("SignalR disconnected");
                 } else {
@@ -338,7 +338,7 @@ export class HubService {
         } else {
             //were not reconnecting, so try to invoke our method
             return Observable.fromPromise<T>(hubContainer.hubProxy.invoke(method, ...args))
-                .catch(err => {
+                .catch((err: any) => {
                     //we lost connection in the middle of the call? wait for reconnecting and send again then.
                     if (this.reconnectingObservable != null) {
                         return this.invoke(hubName, method, args);

@@ -1,6 +1,6 @@
 {
   "name": "ngx-signalr-hubservice",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Makes using signalr in angular 2 easy",
   "main": "index.js",
   "scripts": {
