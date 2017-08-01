@@ -80,14 +80,14 @@ Makes using signalr hubs easy
 
     }
     ```
-1. Define a method that the hub will call with @HubSubscription in the same class. You can pass in the method name in the decorator, or just leave it blank. If left blank, the service will use the name of the method that you added to decorator to as the subscription name. NOTE: you generally have to run these callbacks inside angular's zone if you're updating UI. Hopefully future versions you won't have to do this.
+1. Define a method that the hub will call with @HubSubscription in the same class. You can pass in the method name in the decorator, or just leave it blank. If left blank, the service will use the name of the method that you added the decorator to as the subscription name. NOTE: you generally have to run these callbacks inside angular's zone if you're updating UI. Hopefully future versions you won't have to do this.
     ```
     @HubSubscription()
     receiveMessage(param1: any, param2: any) {
         console.log(param1, param2);
     }
     ```
-1. For calling methods on the hub, you need to register this class with the hub service. Note, you HAVE to do this before calling connect. If you do it after your hubs won't be registered.
+1. For calling methods on the hub, you need to register this class with the hub service.
 
     Update your constructor to this, and add a new field on your class:
     ```
@@ -103,5 +103,10 @@ Makes using signalr hubs easy
         console.log(result);
     }
     ```
-
-And thats it!
+1. You can unregister hub wrappers from the service with `hubWrapper.unregister()` or `hubService.unregister(this);`. Generally you wouldn't want to do this because you'll call signalr from services that exist during the lifetime of your application.
+    ```
+    ngOnDestroy() {
+        this.hubWrapper.unregister();
+        //or this.hubService.unregister(this);
+    }
+    ```
