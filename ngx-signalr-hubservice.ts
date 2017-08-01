@@ -1,4 +1,4 @@
-import { Component, Injectable, EventEmitter, NgZone } from '@angular/core';
+import { Injectable, EventEmitter } from '@angular/core';
 import { Observable } from 'rxjs/Observable';
 import { Subject } from 'rxjs/Subject';
 
@@ -93,7 +93,8 @@ export function HubSubscription(eventName?: string) {
 /** A wrapper around the hub registration that lets us invoke methods on the hub and keep our "this" reference on responses */
 export type HubWrapper = {
     /* calls the method on the hub with the provided arguments */
-    invoke: <T>(method: string, ...args: any[]) => Observable<T>
+    invoke: <T>(method: string, ...args: any[]) => Observable<T>,
+    unregister: () => void
 };
 
 //some helper types. not exposed outside of this class.
