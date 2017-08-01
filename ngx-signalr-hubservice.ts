@@ -363,7 +363,8 @@ export class HubService {
         }
 
         let hubWrapper = {
-            invoke: <T>(method: string, ...args: any[]) => this.invoke<T>(hubProperties.hubName, method, ...args)
+            invoke: <T>(method: string, ...args: any[]) => this.invoke<T>(hubProperties.hubName, method, ...args),
+            unregister: () => this.unregister(instance)
         };
 
         if (hubProperties.subscriptions.length == 0) {
@@ -378,6 +379,7 @@ export class HubService {
             return hubWrapper;
         }
 
+        let proxy = this.hubProxies[hubProperties.hubName];
         for (let subscription of hubProperties.subscriptions) {
             //if the method for this subscription isn't defined skip it
             if (!(subscription.functionName in instance)) {
@@ -385,13 +387,39 @@ export class HubService {
                 continue;
             }
             //adds a ref to the method on the instance to the list of events for this hub+event pairing
-            this.hubProxies[hubProperties.hubName].events[subscription.eventName].push({
+            proxy.events[subscription.eventName].push({
                 thisObj: instance,
                 callback: instance[subscription.functionName]
             });
         }
 
         return hubWrapper;
+    }
+
+    /**
+     * Unregisters the instance from events.
+     * @param instance the class instance to unregister
+     */
+    public unregister(instance: any): void {        
+        let hubProperties = <HubProperties>Reflect.getMetadata("Hub", instance);
+        if (!hubProperties) {
+            throw new Error("You must call unregister with an instance of a class with the @Hub decorator on it. Instance: " + instance);
+        }
+
+        let proxy = this.hubProxies[hubProperties.hubName];
+        for (let subscription of hubProperties.subscriptions) {            
+            let events = proxy.events[subscription.eventName];
+            if (events == null) {
+                continue;
+            }
+            for(let i = events.length - 1; i >= 0; i--) {
+                let event = events[i];
+                if (event.thisObj != instance) {
+                    continue;
+                }
+                events.splice(i, 1);
+            }
+        }
     }
 
     /**
