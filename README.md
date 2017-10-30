@@ -8,6 +8,10 @@ Makes using signalr hubs easy
 1. Install ngx-signalr-hubservice
 `npm install --save ngx-signalr-hubservice`
 
+1. Add the jquery and signalr scripts to your angular-cli.json
+    ```
+    "scripts": [ "../node_modules/jquery/dist/jquery.min.js", "../node_modules/signalr/jquery.signalR.js"]
+    ```
 1. Import the HubService and add it to your providers in your `app.module.ts`. Mine looks like this(I've included FormsModule for the demo):
     ```
     import { BrowserModule } from '@angular/platform-browser';

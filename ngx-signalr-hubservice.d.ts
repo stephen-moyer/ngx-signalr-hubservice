@@ -34,7 +34,6 @@ export declare function HubSubscription(eventName?: string): (target: Object, pr
 /** A wrapper around the hub registration that lets us invoke methods on the hub and keep our "this" reference on responses */
 export declare type HubWrapper = {
     invoke: <T>(method: string, ...args: any[]) => Observable<T>;
-    unregister: () => void;
 };
 /**
  * Manages a connection to a signalr service, and provides easy access to its hubs and their events
@@ -58,7 +57,7 @@ export declare type HubWrapper = {
  * ```
  */
 export declare class HubService {
-    /** jQuery connection. TODO look for signalr bindings */
+    /** jQuery connection. */
     private connection;
     /** emitter for connected event */
     private connectedEmitter;
@@ -70,7 +69,7 @@ export declare class HubService {
     private reconnectedEmitter;
     /** if there was an error connecting */
     private _errorConnecting;
-    /** current trying to reconnect? */
+    /** currently trying to reconnect? */
     private tryingReconnect;
     /** the current state of the signalR connection */
     private reconnectingObservable;
@@ -94,6 +93,7 @@ export declare class HubService {
     /**
      * Connects to the signalr server. Hubs are registered with the connection through
      * the @Hub decorator
+     * @param attemptReconnects Should the service try to reconnect if it loses connection
      */
     connect(url?: string, attemptReconnects?: boolean): Observable<boolean>;
     private _connect(url, ignoreReconnecting);
@@ -126,6 +126,9 @@ export declare class HubService {
      */
     onDisconnected(generatorOrNext: any): any;
     private disconnectedCallback;
+    /**
+     * Attemps to reconnect
+     */
     private tryReconnect();
     private static delay(ms);
     /**
@@ -143,11 +146,6 @@ export declare class HubService {
      * @param instance The class to register with the hub service
      */
     register(instance: any): HubWrapper;
-    /**
-     * Unregisters the instance from events.
-     * @param instance the class instance to unregister
-     */
-    unregister(instance: any): void;
     /**
      * Pushes out a message received by the hub to the subscribers registered through register
      * @param hub The hub name
