@@ -93,6 +93,7 @@ export declare class HubService {
     /**
      * Connects to the signalr server. Hubs are registered with the connection through
      * the @Hub decorator
+     * @param url  URL of the signalr server
      * @param attemptReconnects Should the service try to reconnect if it loses connection
      */
     connect(url?: string, attemptReconnects?: boolean): Observable<boolean>;
@@ -146,6 +147,11 @@ export declare class HubService {
      * @param instance The class to register with the hub service
      */
     register(instance: any): HubWrapper;
+    /**
+     * Unregisters the instance from events.
+     * @param instance the class instance to unregister
+     */
+    unregister(instance: any): void;
     /**
      * Pushes out a message received by the hub to the subscribers registered through register
      * @param hub The hub name
