@@ -94,6 +94,7 @@ export function HubSubscription(eventName?: string) {
 export type HubWrapper = {
     /* calls the method on the hub with the provided arguments */
     invoke: <T>(method: string, ...args: any[]) => Observable<T>,
+    unregister: () => void,
     hub: any
 };
 
@@ -375,7 +376,8 @@ export class HubService {
 
         let hubWrapper = {
             invoke: <T>(method: string, ...args: any[]) => this.invoke<T>(hubProperties.hubName, method, ...args),
-            hub: <any> null
+            hub: <any> null,
+            unregister: () => this.unregister(instance)
         };
 
         if (hubProperties.subscriptions.length == 0) {
@@ -414,6 +416,32 @@ export class HubService {
         }
 
         return hubWrapper;
+    }
+    
+    /**
+     * Unregisters the instance from events.
+     * @param instance the class instance to unregister
+     */
+    public unregister(instance: any): void {
+        let hubProperties = <HubProperties>Reflect.getMetadata("Hub", instance);
+        if (!hubProperties) {
+            throw new Error("You must call unregister with an instance of a class with the @Hub decorator on it. Instance: " + instance);
+        }
+
+        let proxy = this.hubProxies[hubProperties.hubName];
+        for (let subscription of hubProperties.subscriptions) {
+            let events = proxy.events[subscription.eventName];
+            if (events == null) {
+                continue;
+            }
+            for (let i = events.length - 1; i >= 0; i--) {
+                let event = events[i];
+                if (event.thisObj != instance) {
+                    continue;
+                }
+                events.splice(i, 1);
+            }
+        }
     }
 
     /**
