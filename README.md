@@ -1,16 +1,16 @@
-# ngx-SignalR-hubservice
+# ngx-signalr-hubservice
 Makes using SignalR in Angular 2/4 easy.
 
 # Getting started
 
 1. Set up a new project using [@angular/cli](https://cli.angular.io/)
 
-1. Install ngx-SignalR-hubservice
+1. Install ngx-signalr-hubservice
 `npm install --save ngx-SignalR-hubservice`
 
 1. Add the jquery and SignalR scripts to your angular-cli.json
     ```
-    "scripts": [ "../node_modules/jquery/dist/jquery.min.js", "../node_modules/SignalR/jquery.SignalR.js"]
+    "scripts": [ "../node_modules/jquery/dist/jquery.min.js", "../node_modules/signalr/jquery.signalr.js"]
     ```
 1. Import the HubService and add it to your providers in your `app.module.ts`. Mine looks like this(I've included FormsModule for the demo):
     ```
@@ -20,7 +20,7 @@ Makes using SignalR in Angular 2/4 easy.
 
     import { AppComponent } from './app.component';
 
-    import { HubService } from 'ngx-SignalR-hubservice';
+    import { HubService } from 'ngx-signalr-hubservice';
 
     @NgModule({
     declarations: [
@@ -115,3 +115,7 @@ Makes using SignalR in Angular 2/4 easy.
         //or this.hubService.unregister(this);
     }
     ```
+
+# Notes
+
+If you want to get the underlying SignalR instances, you can access them through `HubService.connection` for the SignalR connection instance(`$.connection`). You can access the SignalR hub instances for the individual hubs through `HubWrapper.hub`.

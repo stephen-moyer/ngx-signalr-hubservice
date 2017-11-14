@@ -93,7 +93,8 @@ export function HubSubscription(eventName?: string) {
 /** A wrapper around the hub registration that lets us invoke methods on the hub and keep our "this" reference on responses */
 export type HubWrapper = {
     /* calls the method on the hub with the provided arguments */
-    invoke: <T>(method: string, ...args: any[]) => Observable<T>
+    invoke: <T>(method: string, ...args: any[]) => Observable<T>,
+    hub: any
 };
 
 // Some helper types. not exposed outside of this class.
@@ -333,6 +334,9 @@ export class HubService {
      */
     public invoke<T>(hubName: string, method: string, ...args: any[]): Observable<T> {
         let hubContainer = this.hubProxies[hubName];
+        if (hubContainer == null) {
+            throw new Error(`Invalid hub name ${hubName}`);
+        }
         if (this.reconnectingObservable != null) {
             // We're reconnecting, so wait on that, then invoke our method
             return this.reconnectingObservable.flatMap((connected: boolean) => {
@@ -370,7 +374,8 @@ export class HubService {
         }
 
         let hubWrapper = {
-            invoke: <T>(method: string, ...args: any[]) => this.invoke<T>(hubProperties.hubName, method, ...args)
+            invoke: <T>(method: string, ...args: any[]) => this.invoke<T>(hubProperties.hubName, method, ...args),
+            hub: <any> null
         };
 
         if (hubProperties.subscriptions.length == 0) {
@@ -385,6 +390,16 @@ export class HubService {
             return hubWrapper;
         }
 
+        // Get the hub proxy and set its hub instance if it's not set.
+        let hubProxy = this.hubProxies[hubProperties.hubName];
+        if (hubProxy == null) {
+            throw new Error(`Invalid hub name ${hubProperties.hubName}`);
+        }
+        if (hubWrapper.hub == null) {
+            hubWrapper.hub = hubProxy.hubProxy;
+        }
+
+        // Subscribe to all the events
         for (let subscription of hubProperties.subscriptions) {
             // If the method for this subscription isn't defined skip it
             if (!(subscription.functionName in instance)) {
@@ -392,7 +407,7 @@ export class HubService {
                 continue;
             }
             // Adds a ref to the method on the instance to the list of events for this hub+event pairing
-            this.hubProxies[hubProperties.hubName].events[subscription.eventName].push({
+            hubProxy.events[subscription.eventName].push({
                 thisObj: instance,
                 callback: instance[subscription.functionName]
             });
