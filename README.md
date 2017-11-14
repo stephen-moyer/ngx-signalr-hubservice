@@ -118,4 +118,6 @@ Makes using SignalR in Angular 2/4 easy.
 
 # Notes
 
-If you want to get the underlying SignalR instances, you can access them through `HubService.connection` for the SignalR connection instance(`$.connection`). You can access the SignalR hub instances for the individual hubs through `HubWrapper.hub`.
+- If you want to get the underlying SignalR instances, you can access them through `HubService.connection` for the SignalR connection instance(`$.connection`). You can access the SignalR hub instances for the individual hubs through `HubWrapper.hub`.
+
+- If you pass `attemptReconnects` as true to `HubService.connect`, any `invoke` calls on your HubWrappers will defer until the HubService reconnects. They will most likely not error.
