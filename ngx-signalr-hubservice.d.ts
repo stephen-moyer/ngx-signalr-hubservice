@@ -34,6 +34,7 @@ export declare function HubSubscription(eventName?: string): (target: Object, pr
 /** A wrapper around the hub registration that lets us invoke methods on the hub and keep our "this" reference on responses */
 export declare type HubWrapper = {
     invoke: <T>(method: string, ...args: any[]) => Observable<T>;
+    hub: any;
 };
 /**
  * Manages a connection to a signalr service, and provides easy access to its hubs and their events
