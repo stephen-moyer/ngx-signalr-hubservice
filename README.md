@@ -1,16 +1,16 @@
-# ngx-signalr-hubservice
-Makes using signalr hubs easy
+# ngx-SignalR-hubservice
+Makes using SignalR in Angular 2/4 easy.
 
 # Getting started
 
 1. Set up a new project using [@angular/cli](https://cli.angular.io/)
 
-1. Install ngx-signalr-hubservice
-`npm install --save ngx-signalr-hubservice`
+1. Install ngx-SignalR-hubservice
+`npm install --save ngx-SignalR-hubservice`
 
-1. Add the jquery and signalr scripts to your angular-cli.json
+1. Add the jquery and SignalR scripts to your angular-cli.json
     ```
-    "scripts": [ "../node_modules/jquery/dist/jquery.min.js", "../node_modules/signalr/jquery.signalR.js"]
+    "scripts": [ "../node_modules/jquery/dist/jquery.min.js", "../node_modules/SignalR/jquery.SignalR.js"]
     ```
 1. Import the HubService and add it to your providers in your `app.module.ts`. Mine looks like this(I've included FormsModule for the demo):
     ```
@@ -20,7 +20,7 @@ Makes using signalr hubs easy
 
     import { AppComponent } from './app.component';
 
-    import { HubService } from 'ngx-signalr-hubservice';
+    import { HubService } from 'ngx-SignalR-hubservice';
 
     @NgModule({
     declarations: [
@@ -43,12 +43,13 @@ Makes using signalr hubs easy
     ...
     ...
     async ngOnInit() {
-        //connects to the signalr server.
+        // connects to the SignalR server.
         this.connected = await this.hubService.connect(url).toPromise();
     }
     ```
+   For my applications I generally just reference the HubService in my other services(one service for each hub), and expose the hub methods/events through those services. For a demo this works too though.
 
-1. Define a class that will interact with the signalr server. For me it's just the root `AppComponent`.
+1. Define a class that will interact with the SignalR server. For me it's just the root `AppComponent`.
    You can use the `@Hub` decorator on the class to define what hub this class connects to.
     ```
     import { Component, OnInit } from '@angular/core';
@@ -57,17 +58,17 @@ Makes using signalr hubs easy
     Hub, 
     HubSubscription, 
     HubWrapper 
-    } from 'ngx-signalr-hubservice';
+    } from 'ngx-SignalR-hubservice';
 
     import 'rxjs/add/operator/toPromise';
 
-    const url = 'http://localhost:64339/signalr';
+    const url = 'http://localhost:64339/SignalR';
 
     @Component({
     selector: 'app-root',
     templateUrl: './app.component.html'
     })
-    @Hub({ hubName: 'chatHub' }) //<-- Your hub declaration
+    @Hub({ hubName: 'chatHub' }) // <-- Your hub declaration
     export class AppComponent implements OnInit {
 
         private hubWrapper: HubWrapper;
@@ -107,7 +108,7 @@ Makes using signalr hubs easy
         console.log(result);
     }
     ```
-1. You can unregister hub wrappers from the service with `hubWrapper.unregister()` or `hubService.unregister(this);`. Generally you wouldn't want to do this because you'll call signalr from services that exist during the lifetime of your application.
+1. You can unregister hub wrappers from the service with `hubWrapper.unregister()` or `hubService.unregister(this);`. Generally you wouldn't want to do this because you'll call SignalR from services that exist during the lifetime of your application.
     ```
     ngOnDestroy() {
         this.hubWrapper.unregister();

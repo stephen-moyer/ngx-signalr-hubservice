@@ -125,7 +125,7 @@ type eventsType = { [key: string]: eventType[] };
 export class HubService {
 
     /** jQuery connection. */
-    private connection: any = null;
+    private _connection: any = null;
     /** emitter for connected event */
     private connectedEmitter = new EventEmitter<boolean>();
     /** emitter for disconnected event */
@@ -157,11 +157,15 @@ export class HubService {
         };
     };
 
+    get connection() {
+        return this._connection;
+    }
+
     /**
      * Is the client connected?
      */
     get connected() {
-        return this.connection !== null && this.connection.state === $.signalR.connectionState.connected;
+        return this._connection !== null && this._connection.state === $.signalR.connectionState.connected;
     }
 
     /**
@@ -174,8 +178,8 @@ export class HubService {
     private initConnection(url: string) {
         // Initialize signalr data structures
         this.hubProxies = {};
-        this.connection = $.hubConnection(url, { useDefaultPath: false });
-        this.connection.logging = false;
+        this._connection = $.hubConnection(url, { useDefaultPath: false });
+        this._connection.logging = false;
 
         // We have to create the hub proxies and subscribe to events before connecting
         for (var properties of allHubProperties) {
@@ -184,10 +188,10 @@ export class HubService {
         for (var deferredRegistration of this.deferredRegistrations) {
             this.register(deferredRegistration);
         }
-        this.connection.disconnected(this.disconnectedCallback);
-        this.connection.reconnected(this.reconnectedCallback);
-        this.connection.reconnecting(this.recconectingCallback);
-        this.connection.stateChanged(function (change: any) {
+        this._connection.disconnected(this.disconnectedCallback);
+        this._connection.reconnected(this.reconnectedCallback);
+        this._connection.reconnecting(this.recconectingCallback);
+        this._connection.stateChanged(function (change: any) {
             this.signalRState = change.newState;
         });
     }
@@ -208,11 +212,11 @@ export class HubService {
         if (!ignoreReconnecting && this.reconnectingObservable != null) {
             return this.reconnectingObservable.asObservable();
         }
-        if (this.connection === null) {
+        if (this._connection === null) {
             this.initConnection(url);
         }
-        // This.connection.start just returns the connection object, so map it to this.connected when it completes
-        return Observable.fromPromise<boolean>(this.connection.start())
+        // this._connection.start just returns the connection object, so map it to this.connected when it completes
+        return Observable.fromPromise<boolean>(this._connection.start())
             .map((value: any) => this.connected)
             .do(this.connectedCallback)
             .catch(this.connectionErrorCallback);
@@ -223,7 +227,7 @@ export class HubService {
      */
     public disconnect(): Observable<boolean> {
         // connection.stop just returns the connection object, so map it to this.connected when it completes
-        return Observable.fromPromise<boolean>(this.connection.stop()).map((value: any) => this.connected);
+        return Observable.fromPromise<boolean>(this._connection.stop()).map((value: any) => this.connected);
     }
 
     /**
@@ -303,7 +307,7 @@ export class HubService {
         this.tryingReconnect = true;
         this.reconnectingObservable = new Subject<boolean>();
         //try to reconnect forever.
-        this._connect(this.connection.url, this.attemptReconnects).subscribe(async (connected: boolean) => {
+        this._connect(this._connection.url, this.attemptReconnects).subscribe(async (connected: boolean) => {
             if (!connected) {
                 await HubService.delay(1000);
                 this.tryReconnect();
@@ -423,7 +427,7 @@ export class HubService {
      * @param properties the properties for the hub
      */
     private createHubProxy(properties: HubProperties) {
-        let hubProxy = this.connection.createHubProxy(properties.hubName);
+        let hubProxy = this._connection.createHubProxy(properties.hubName);
         let events: eventsType = {};
         let _this_ = this;
         for (let subscription of properties.subscriptions) {

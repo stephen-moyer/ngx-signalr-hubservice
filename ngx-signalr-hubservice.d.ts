@@ -58,7 +58,7 @@ export declare type HubWrapper = {
  */
 export declare class HubService {
     /** jQuery connection. */
-    private connection;
+    private _connection;
     /** emitter for connected event */
     private connectedEmitter;
     /** emitter for disconnected event */
@@ -81,6 +81,7 @@ export declare class HubService {
      * callbacks that we're going to push out events to
      */
     private hubProxies;
+    readonly connection: any;
     /**
      * Is the client connected?
      */
@@ -93,6 +94,7 @@ export declare class HubService {
     /**
      * Connects to the signalr server. Hubs are registered with the connection through
      * the @Hub decorator
+     * @param url  URL of the signalr server
      * @param attemptReconnects Should the service try to reconnect if it loses connection
      */
     connect(url?: string, attemptReconnects?: boolean): Observable<boolean>;
