@@ -177,10 +177,37 @@ export class HubService {
         return this._errorConnecting;
     }
 
-    private initConnection(url: string) {
+    /**
+     * Connects to the signalr server. Hubs are registered with the connection through
+     * the @Hub decorator
+     * @param url  URL of the signalr server
+     * @param attemptReconnects Should the service try to reconnect if it loses connection
+     */
+    public connect(url: string = '/signalr', attemptReconnects: boolean = false, qs: string = null): Observable<boolean> {
+        this.attemptReconnects = attemptReconnects;
+        return this._connect(url, false, qs);
+    }
+
+    private _connect(url: string, ignoreReconnecting: boolean, qs: string) {
+        // If user calls connect while we're trying to reconnect, just give them that observable
+        if (!ignoreReconnecting && this.reconnectingObservable != null) {
+            return this.reconnectingObservable.asObservable();
+        }
+        if (this._connection === null) {
+            this.initConnection(url, qs);
+        }
+        // this._connection.start just returns the connection object, so map it to this.connected when it completes
+        return Observable.fromPromise<boolean>(this._connection.start())
+            .map((value: any) => this.connected)
+            .do(this.connectedCallback)
+            .catch(this.connectionErrorCallback);
+    }
+
+    private initConnection(url: string, qs: string) {
         // Initialize signalr data structures
         this.hubProxies = {};
         this._connection = $.hubConnection(url, { useDefaultPath: false });
+        this._connection.qs = qs;
         this._connection.logging = false;
 
         // We have to create the hub proxies and subscribe to events before connecting
@@ -196,32 +223,6 @@ export class HubService {
         this._connection.stateChanged(function (change: any) {
             this.signalRState = change.newState;
         });
-    }
-
-    /**
-     * Connects to the signalr server. Hubs are registered with the connection through
-     * the @Hub decorator
-     * @param url  URL of the signalr server
-     * @param attemptReconnects Should the service try to reconnect if it loses connection
-     */
-    public connect(url: string = '/signalr', attemptReconnects: boolean = false): Observable<boolean> {
-        this.attemptReconnects = attemptReconnects;
-        return this._connect(url, false);
-    }
-
-    private _connect(url: string, ignoreReconnecting: boolean) {
-        // If user calls connect while we're trying to reconnect, just give them that observable
-        if (!ignoreReconnecting && this.reconnectingObservable != null) {
-            return this.reconnectingObservable.asObservable();
-        }
-        if (this._connection === null) {
-            this.initConnection(url);
-        }
-        // this._connection.start just returns the connection object, so map it to this.connected when it completes
-        return Observable.fromPromise<boolean>(this._connection.start())
-            .map((value: any) => this.connected)
-            .do(this.connectedCallback)
-            .catch(this.connectionErrorCallback);
     }
 
     /**
@@ -309,7 +310,7 @@ export class HubService {
         this.tryingReconnect = true;
         this.reconnectingObservable = new Subject<boolean>();
         //try to reconnect forever.
-        this._connect(this._connection.url, this.attemptReconnects).subscribe(async (connected: boolean) => {
+        this._connect(this._connection.url, this.attemptReconnects, this._connection.qs).subscribe(async (connected: boolean) => {
             if (!connected) {
                 await HubService.delay(1000);
                 this.tryReconnect();
