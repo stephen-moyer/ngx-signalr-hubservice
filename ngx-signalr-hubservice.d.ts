@@ -12,7 +12,12 @@ export declare type HubProperties = {
      */
     hubName: string;
     /**
-     * The events on this hub to subscribe to
+     * What "Group" this Hub belongs to.
+     * If you're connecting to multiple SignalR servers you can use this to define what server(s) this hub is on.
+     */
+    hubGroups?: string | string[];
+    /**
+     * The events on this hub to subscribe to. You can ignore this if you use the @HubSubscription decorator on your methods
      */
     subscriptions?: Array<{
         eventName: string;
@@ -36,6 +41,16 @@ export declare type HubWrapper = {
     invoke: <T>(method: string, ...args: any[]) => Observable<T>;
     unregister: () => void;
     hub: any;
+};
+export declare type HubServiceOptions = {
+    /** Defaults to "/signalr" of the current domain */
+    url?: string;
+    /** Should the service try to silently reconnect if you lose connection */
+    attemptReconnects?: boolean;
+    /** The query string */
+    qs?: string;
+    /** The hub groups this connection should se */
+    hubGroups?: string | string[];
 };
 /**
  * Manages a connection to a signalr service, and provides easy access to its hubs and their events
@@ -77,7 +92,7 @@ export declare class HubService {
     private reconnectingObservable;
     /** list of services to register after connect is called */
     private deferredRegistrations;
-    private attemptReconnects;
+    private options;
     /**
      * The list of hubs keyed by name. Each entry has the jQuery hubproxy instance, and a list of
      * callbacks that we're going to push out events to
@@ -96,11 +111,12 @@ export declare class HubService {
      * Connects to the signalr server. Hubs are registered with the connection through
      * the @Hub decorator
      * @param url  URL of the signalr server
-     * @param attemptReconnects Should the service try to reconnect if it loses connection
+     * @param options Options to use for the connection
      */
-    connect(url?: string, attemptReconnects?: boolean, qs?: string): Observable<boolean>;
-    private _connect(url, ignoreReconnecting, qs);
-    private initConnection(url, qs);
+    connect(options?: HubServiceOptions): Observable<boolean>;
+    private _connect(ignoreReconnecting);
+    private initConnection();
+    private matchesGroup(hubGroups);
     /**
      * Disconnects from the signalr server, and pushes out the disconnected event
      */

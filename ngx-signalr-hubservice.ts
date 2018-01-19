@@ -20,13 +20,20 @@ const allHubProperties: HubProperties[] = [];
 
 /** Properties for the hub you're connecting to. hubName is required */
 export type HubProperties = {
+
     /**
      * The name of the hub on the server to subscribe to.
      */
     hubName: string,
 
     /**
-     * The events on this hub to subscribe to
+     * What "Group" this Hub belongs to.
+     * If you're connecting to multiple SignalR servers you can use this to define what server(s) this hub is on.
+     */
+    hubGroups?: string | string[],
+
+    /**
+     * The events on this hub to subscribe to. You can ignore this if you use the @HubSubscription decorator on your methods
      */
     subscriptions?: Array<{
         eventName: string,
@@ -51,6 +58,9 @@ function getOrCreateHubProperties(target: any, hubProperties: HubProperties) {
     }
     if (!properties.hubName) {
         properties.hubName = hubProperties.hubName;
+    }
+    if (!properties.hubGroups) {
+        properties.hubGroups = hubProperties.hubGroups;
     }
     return properties;
 }
@@ -97,6 +107,17 @@ export type HubWrapper = {
     unregister: () => void,
     hub: any
 };
+
+export type HubServiceOptions = {
+    /** Defaults to "/signalr" of the current domain */
+    url?: string,
+    /** Should the service try to silently reconnect if you lose connection */
+    attemptReconnects?: boolean;
+    /** The query string */
+    qs?: string;
+    /** The hub groups this connection should se */
+    hubGroups?: string | string[];
+}
 
 // Some helper types. not exposed outside of this class.
 type eventType = { thisObj: any, callback: Function };
@@ -146,7 +167,7 @@ export class HubService {
     /** list of services to register after connect is called */
     private deferredRegistrations = <any[]>[];
 
-    private attemptReconnects: boolean;
+    private options: HubServiceOptions;
 
     /**
      * The list of hubs keyed by name. Each entry has the jQuery hubproxy instance, and a list of
@@ -181,20 +202,20 @@ export class HubService {
      * Connects to the signalr server. Hubs are registered with the connection through
      * the @Hub decorator
      * @param url  URL of the signalr server
-     * @param attemptReconnects Should the service try to reconnect if it loses connection
+     * @param options Options to use for the connection
      */
-    public connect(url: string = '/signalr', attemptReconnects: boolean = false, qs: string = null): Observable<boolean> {
-        this.attemptReconnects = attemptReconnects;
-        return this._connect(url, false, qs);
+    public connect(options?: HubServiceOptions): Observable<boolean> {
+        this.options = options || { attemptReconnects: false };
+        return this._connect(false);
     }
 
-    private _connect(url: string, ignoreReconnecting: boolean, qs: string) {
+    private _connect(ignoreReconnecting: boolean) {
         // If user calls connect while we're trying to reconnect, just give them that observable
         if (!ignoreReconnecting && this.reconnectingObservable != null) {
             return this.reconnectingObservable.asObservable();
         }
         if (this._connection === null) {
-            this.initConnection(url, qs);
+            this.initConnection();
         }
         // this._connection.start just returns the connection object, so map it to this.connected when it completes
         return Observable.fromPromise<boolean>(this._connection.start())
@@ -203,26 +224,55 @@ export class HubService {
             .catch(this.connectionErrorCallback);
     }
 
-    private initConnection(url: string, qs: string) {
+    private initConnection() {
         // Initialize signalr data structures
         this.hubProxies = {};
-        this._connection = $.hubConnection(url, { useDefaultPath: false });
-        this._connection.qs = qs;
+        this._connection = $.hubConnection(this.options.url || "/signalr", { useDefaultPath: false });
+        this._connection.qs = this.options.qs;
         this._connection.logging = false;
 
         // We have to create the hub proxies and subscribe to events before connecting
         for (var properties of allHubProperties) {
+            // Make sure we match this group
+            if (!this.matchesGroup(properties.hubGroups))
+                continue;
+            
+            // We do, so create the proxy.
             this.hubProxies[properties.hubName] = this.createHubProxy(properties);
         }
+
         for (var deferredRegistration of this.deferredRegistrations) {
             this.register(deferredRegistration);
         }
+
         this._connection.disconnected(this.disconnectedCallback);
         this._connection.reconnected(this.reconnectedCallback);
         this._connection.reconnecting(this.recconectingCallback);
         this._connection.stateChanged(function (change: any) {
             this.signalRState = change.newState;
         });
+    }
+
+    private matchesGroup(hubGroups: string | string[]) {
+        // If one is null and the other isn't assume we don't match.
+        if (this.options.hubGroups == null && hubGroups != null)
+            return false;
+        if (hubGroups == null && this.options.hubGroups != null)
+            return false;
+        
+        // If both null then assume match.
+        if (hubGroups == null && this.options.hubGroups == null)
+            return true;
+
+        // Just force arrays here to simplify the logic.
+        if (!Array.isArray(hubGroups))
+            hubGroups = [ hubGroups ];
+        if (!Array.isArray(this.options.hubGroups))
+            this.options.hubGroups = [ this.options.hubGroups ];
+        
+        // Check for at least one match.
+        var ourGroups = <string[]> this.options.hubGroups;
+        return hubGroups.some(group => ourGroups.some(ourGroup => group == ourGroup));
     }
 
     /**
@@ -298,7 +348,7 @@ export class HubService {
             return;
         }
         this.disconnectedEmitter.emit(this.connected);
-        if (this.attemptReconnects) {
+        if (this.options.attemptReconnects) {
             this.tryReconnect();
         }
     }
@@ -310,7 +360,7 @@ export class HubService {
         this.tryingReconnect = true;
         this.reconnectingObservable = new Subject<boolean>();
         //try to reconnect forever.
-        this._connect(this._connection.url, this.attemptReconnects, this._connection.qs).subscribe(async (connected: boolean) => {
+        this._connect(this.options.attemptReconnects).subscribe(async (connected: boolean) => {
             if (!connected) {
                 await HubService.delay(1000);
                 this.tryReconnect();
@@ -395,7 +445,12 @@ export class HubService {
 
         // Get the hub proxy and set its hub instance if it's not set.
         let hubProxy = this.hubProxies[hubProperties.hubName];
+
         if (hubProxy == null) {
+            // Only throw the invalid hub error if it matches this connections group.
+            if (!this.matchesGroup(hubProperties.hubGroups)) {
+                return;
+            }
             throw new Error(`Invalid hub name ${hubProperties.hubName}`);
         }
         if (hubWrapper.hub == null) {
