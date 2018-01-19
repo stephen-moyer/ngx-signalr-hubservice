@@ -6,7 +6,7 @@ Makes using SignalR in Angular 2/4 easy.
 1. Set up a new project using [@angular/cli](https://cli.angular.io/)
 
 1. Install ngx-signalr-hubservice
-`npm install --save ngx-SignalR-hubservice`
+`npm install --save ngx-signalr-hubservice`
 
 1. Add the jquery and SignalR scripts to your angular-cli.json
     ```
