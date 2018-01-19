@@ -44,7 +44,8 @@ Makes using SignalR in Angular 2/4 easy.
     ...
     async ngOnInit() {
         // connects to the SignalR server.
-        this.connected = await this.hubService.connect(url).toPromise();
+		// passing in null for options will just use /signalr on the current domain as the url
+        this.connected = await this.hubService.connect().toPromise();
     }
     ```
    For my applications I generally just reference the HubService in my other services(one service for each hub), and expose the hub methods/events through those services. For a demo this works too though.
@@ -62,8 +63,6 @@ Makes using SignalR in Angular 2/4 easy.
 
     import 'rxjs/add/operator/toPromise';
 
-    const url = 'http://localhost:64339/SignalR';
-
     @Component({
     selector: 'app-root',
     templateUrl: './app.component.html'
@@ -80,7 +79,7 @@ Makes using SignalR in Angular 2/4 easy.
         }
 
         async ngOnInit() {
-            this.connected = await this.hubService.connect(url).toPromise();
+            this.connected = await this.hubService.connect().toPromise();
         }
 
     }
@@ -120,4 +119,4 @@ Makes using SignalR in Angular 2/4 easy.
 
 - If you want to get the underlying SignalR instances, you can access them through `HubService.connection` for the SignalR connection instance(`$.connection`). You can access the SignalR hub instances for the individual hubs through `HubWrapper.hub`.
 
-- If you pass `attemptReconnects` as true to `HubService.connect`, any `invoke` calls on your HubWrappers will defer until the HubService reconnects. They will most likely not error.
+- If you pass `attemptReconnects` as true to `HubService.connect` options parameter, any `invoke` calls on your HubWrappers will defer until the HubService reconnects. They will most likely not error.

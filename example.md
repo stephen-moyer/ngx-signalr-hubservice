@@ -65,7 +65,7 @@ export class AppComponent implements OnInit {
 
   async ngOnInit() {
     this.connecting = true;
-    this.connected = await this.hubService.connect(url).toPromise();
+    this.connected = await this.hubService.connect({ url: url }).toPromise();
     this.connecting = false;
   }
 
