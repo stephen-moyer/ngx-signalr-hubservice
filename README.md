@@ -119,7 +119,7 @@ Makes using SignalR in Angular 2/4 easy.
 You can use the `hubGroups` parameter on the `@Hub` decorator if you have two or more SignalR connections being made and want to control which `@Hub` decorators are applying to which connection.
 
 You can see an example of this here:
-```
+
     @Injectable()
     @Hub({ hubName: 'DataHub', hubGroup: 'group1' })
     export class DataHubService {
@@ -141,12 +141,8 @@ You can see an example of this here:
         }
 
     }
-    
-```
 
 Note the `@Inject` decorator on the constructors of the services. You need to specify which connection you want to inject into your service if you're using multiple HubServices. Remember to provide your HubService's correctly too with the proper `InjectionToken`
-
-```
 
     // Probably at the top of your NgModule
     export let HUB_SERVICE_GROUP1 = new InjectionToken<HubService>("hubservice.group1");
@@ -159,8 +155,6 @@ Note the `@Inject` decorator on the constructors of the services. You need to sp
         {provide: HUB_SERVICE_GROUP1, useValue: new HubService() }
         {provide: HUB_SERVICE_GROUP2, useValue: new HubService() }
     ]
-
-```
 
 # Notes
 
