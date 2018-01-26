@@ -115,6 +115,53 @@ Makes using SignalR in Angular 2/4 easy.
     }
     ```
 
+# Hub Groups
+You can use the `hubGroups` parameter on the `@Hub` decorator if you have two or more SignalR connections being made and want to control which `@Hub` decorators are applying to which connection.
+
+You can see an example of this here:
+```
+    @Injectable()
+    @Hub({ hubName: 'DataHub', hubGroup: 'group1' })
+    export class DataHubService {
+
+        constructor (@Inject(HUB_SERVICE_GROUP1) private hubService: HubService) {
+            this.hubWrapper = this.hubService.register(this);
+            this.hubService.connect('http://localhost:81/signalr', { hubGroup: 'group1' }).toPromise();
+        }
+
+    }
+
+    @Injectable()
+    @Hub({ hubName: 'EvaluationHub', hubGroup: 'group2' })
+    export class EvaluationHubService {
+
+        constructor (@Inject(HUB_SERVICE_GROUP2) private hubService: HubService) {
+            this.hubWrapper = this.hubService.register(this);
+            this.hubService.connect('http://localhost:82/signalr', { hubGroup: 'group2' }).toPromise();
+        }
+
+    }
+    
+```
+
+Note the `@Inject` decorator on the constructors of the services. You need to specify which connection you want to inject into your service if you're using multiple HubServices. Remember to provide your HubService's correctly too with the proper `InjectionToken`
+
+```
+
+    // Probably at the top of your NgModule
+    export let HUB_SERVICE_GROUP1 = new InjectionToken<HubService>("hubservice.group1");
+    export let HUB_SERVICE_GROUP2 = new InjectionToken<HubService>("hubservice.group2");
+
+    ...
+
+    // In your NgModule decorator
+    providers: [
+        {provide: HUB_SERVICE_GROUP1, useValue: new HubService() }
+        {provide: HUB_SERVICE_GROUP2, useValue: new HubService() }
+    ]
+
+```
+
 # Notes
 
 - If you want to get the underlying SignalR instances, you can access them through `HubService.connection` for the SignalR connection instance(`$.connection`). You can access the SignalR hub instances for the individual hubs through `HubWrapper.hub`.

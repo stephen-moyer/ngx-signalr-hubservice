@@ -201,11 +201,14 @@ export class HubService {
     /**
      * Connects to the signalr server. Hubs are registered with the connection through
      * the @Hub decorator
-     * @param url  URL of the signalr server
      * @param options Options to use for the connection
      */
-    public connect(options?: HubServiceOptions): Observable<boolean> {
-        this.options = options || { attemptReconnects: false };
+    public connect(options: HubServiceOptions = {}): Observable<boolean> {
+        this.options = {
+            url: "/signalr",
+            attemptReconnects: false, 
+            ...options 
+        };
         return this._connect(false);
     }
 
@@ -227,7 +230,7 @@ export class HubService {
     private initConnection() {
         // Initialize signalr data structures
         this.hubProxies = {};
-        this._connection = $.hubConnection(this.options.url || "/signalr", { useDefaultPath: false });
+        this._connection = $.hubConnection(this.options.url, { useDefaultPath: false });
         this._connection.qs = this.options.qs;
         this._connection.logging = false;
 
