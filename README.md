@@ -9,11 +9,11 @@ Makes using SignalR in Angular 2/4 easy.
 `npm install --save ngx-signalr-hubservice`
 
 1. Add the jquery and SignalR scripts to your angular-cli.json
-    ```
+    ```typescript
     "scripts": [ "../node_modules/jquery/dist/jquery.min.js", "../node_modules/signalr/jquery.signalr.js"]
     ```
 1. Import the HubService and add it to your providers in your `app.module.ts`. Mine looks like this(I've included FormsModule for the demo):
-    ```
+    ```typescript
     import { BrowserModule } from '@angular/platform-browser';
     import { NgModule } from '@angular/core';
     import { FormsModule } from '@angular/forms';
@@ -37,7 +37,7 @@ Makes using SignalR in Angular 2/4 easy.
     ```
 1. Inject the hub service in (probably) your root component. In this case it's `app.component.ts`. Make sure you import the service. Here you can make the connection.
 
-    ```
+    ```typescript
     constructor(private hubService: HubService) {
     }
     ...
@@ -52,7 +52,7 @@ Makes using SignalR in Angular 2/4 easy.
 
 1. Define a class that will interact with the SignalR server. For me it's just the root `AppComponent`.
    You can use the `@Hub` decorator on the class to define what hub this class connects to.
-    ```
+    ```typescript
     import { Component, OnInit } from '@angular/core';
     import { 
     HubService, 
@@ -85,7 +85,7 @@ Makes using SignalR in Angular 2/4 easy.
     }
     ```
 1. Define a method that the hub will call with @HubSubscription in the same class. You can pass in the method name in the decorator, or just leave it blank. If left blank, the service will use the name of the method that you added the decorator to as the subscription name. NOTE: you generally have to run these callbacks inside angular's zone if you're updating UI. Hopefully future versions you won't have to do this.
-    ```
+    ```typescript
     @HubSubscription()
     receiveMessage(param1: any, param2: any) {
         console.log(param1, param2);
@@ -94,21 +94,21 @@ Makes using SignalR in Angular 2/4 easy.
 1. For calling methods on the hub, you need to register this class with the hub service.
 
     Update your constructor to this, and add a new field on your class:
-    ```
+    ```typescript
     private hubWrapper: HubWrapper;
     constructor(private hubService: HubService) {
         this.hubWrapper = hubService.register(this);
     }
     ```
    Now you can call methods on the hub using this hub wrapper,
-    ```
+    ```typescript
     callHubMethod() {
         var result = await this.hubWrapper.invoke<boolean>('methodName', 'someParam').toPromise();
         console.log(result);
     }
     ```
 1. You can unregister hub wrappers from the service with `hubWrapper.unregister()` or `hubService.unregister(this);`. Generally you wouldn't want to do this because you'll call SignalR from services that exist during the lifetime of your application.
-    ```
+    ```typescript
     ngOnDestroy() {
         this.hubWrapper.unregister();
         //or this.hubService.unregister(this);
@@ -119,42 +119,46 @@ Makes using SignalR in Angular 2/4 easy.
 You can use the `hubGroups` parameter on the `@Hub` decorator if you have two or more SignalR connections being made and want to control which `@Hub` decorators are applying to which connection.
 
 You can see an example of this here:
+```typescript
+@Injectable()
+@Hub({ hubName: 'DataHub', hubGroup: 'group1' })
+export class DataHubService {
 
-    @Injectable()
-    @Hub({ hubName: 'DataHub', hubGroup: 'group1' })
-    export class DataHubService {
-
-        constructor (@Inject(HUB_SERVICE_GROUP1) private hubService: HubService) {
-            this.hubWrapper = this.hubService.register(this);
-            this.hubService.connect('http://localhost:81/signalr', { hubGroup: 'group1' }).toPromise();
-        }
-
+    constructor (@Inject(HUB_SERVICE_GROUP1) private hubService: HubService) {
+        this.hubWrapper = this.hubService.register(this);
+        this.hubService.connect('http://localhost:81/signalr', { hubGroup: 'group1' }).toPromise();
     }
 
-    @Injectable()
-    @Hub({ hubName: 'EvaluationHub', hubGroup: 'group2' })
-    export class EvaluationHubService {
+}
 
-        constructor (@Inject(HUB_SERVICE_GROUP2) private hubService: HubService) {
-            this.hubWrapper = this.hubService.register(this);
-            this.hubService.connect('http://localhost:82/signalr', { hubGroup: 'group2' }).toPromise();
-        }
+@Injectable()
+@Hub({ hubName: 'EvaluationHub', hubGroup: 'group2' })
+export class EvaluationHubService {
 
+    constructor (@Inject(HUB_SERVICE_GROUP2) private hubService: HubService) {
+        this.hubWrapper = this.hubService.register(this);
+        this.hubService.connect('http://localhost:82/signalr', { hubGroup: 'group2' }).toPromise();
     }
+
+}
+```
 
 Note the `@Inject` decorator on the constructors of the services. You need to specify which connection you want to inject into your service if you're using multiple HubServices. Remember to provide your HubService's correctly too with the proper `InjectionToken`
 
-    // Probably at the top of your NgModule
-    export let HUB_SERVICE_GROUP1 = new InjectionToken<HubService>("hubservice.group1");
-    export let HUB_SERVICE_GROUP2 = new InjectionToken<HubService>("hubservice.group2");
+```typescript
 
-    ...
+// Probably at the top of your NgModule
+export let HUB_SERVICE_GROUP1 = new InjectionToken<HubService>("hubservice.group1");
+export let HUB_SERVICE_GROUP2 = new InjectionToken<HubService>("hubservice.group2");
 
-    // In your NgModule decorator
-    providers: [
-        {provide: HUB_SERVICE_GROUP1, useValue: new HubService() }
-        {provide: HUB_SERVICE_GROUP2, useValue: new HubService() }
-    ]
+...
+
+// In your NgModule decorator
+providers: [
+    { provide: HUB_SERVICE_GROUP1, useValue: new HubService() }
+    { provide: HUB_SERVICE_GROUP2, useValue: new HubService() }
+]
+```
 
 # Notes
 

@@ -2,7 +2,7 @@
 
 Here's an example chat application. Make sure you add the HubService to your app module's providers.
 
-```
+```typescript
 import { Component, OnInit, NgZone } from '@angular/core';
 import { 
   HubService, 
