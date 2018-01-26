@@ -55,17 +55,17 @@ Makes using SignalR in Angular 2/4 easy.
     ```typescript
     import { Component, OnInit } from '@angular/core';
     import { 
-    HubService, 
-    Hub, 
-    HubSubscription, 
-    HubWrapper 
+        HubService, 
+        Hub, 
+        HubSubscription, 
+        HubWrapper 
     } from 'ngx-SignalR-hubservice';
 
     import 'rxjs/add/operator/toPromise';
 
     @Component({
-    selector: 'app-root',
-    templateUrl: './app.component.html'
+        selector: 'app-root',
+        templateUrl: './app.component.html'
     })
     @Hub({ hubName: 'chatHub' }) // <-- Your hub declaration
     export class AppComponent implements OnInit {
