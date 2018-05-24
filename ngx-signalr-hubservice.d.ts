@@ -1,10 +1,4 @@
-import { Observable } from 'rxjs/Observable';
-import 'rxjs/add/observable/of';
-import 'rxjs/add/observable/fromPromise';
-import 'rxjs/add/operator/mergeMap';
-import 'rxjs/add/operator/map';
-import 'rxjs/add/operator/catch';
-import 'rxjs/add/operator/do';
+import { Observable } from 'rxjs';
 /** Properties for the hub you're connecting to. hubName is required */
 export declare type HubProperties = {
     /**
@@ -110,7 +104,6 @@ export declare class HubService {
     /**
      * Connects to the signalr server. Hubs are registered with the connection through
      * the @Hub decorator
-     * @param url  URL of the signalr server
      * @param options Options to use for the connection
      */
     connect(options?: HubServiceOptions): Observable<boolean>;

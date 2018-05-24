@@ -1,14 +1,7 @@
 import { Component, Injectable, EventEmitter, NgZone } from '@angular/core';
-import { Observable } from 'rxjs/Observable';
-import { Subject } from 'rxjs/Subject';
+import { Observable, Subject, from, of, throwError } from 'rxjs';
 
-import 'rxjs/add/observable/of';
-import 'rxjs/add/observable/fromPromise';
-
-import 'rxjs/add/operator/mergeMap';
-import 'rxjs/add/operator/map';
-import 'rxjs/add/operator/catch';
-import 'rxjs/add/operator/do';
+import { map, tap, catchError, flatMap } from 'rxjs/operators';
 
 declare var $: any;
 declare var Reflect: any;
@@ -221,10 +214,11 @@ export class HubService {
             this.initConnection();
         }
         // this._connection.start just returns the connection object, so map it to this.connected when it completes
-        return Observable.fromPromise<boolean>(this._connection.start())
-            .map((value: any) => this.connected)
-            .do(this.connectedCallback)
-            .catch(this.connectionErrorCallback);
+        return from<boolean>(this._connection.start()).pipe(
+            map((value: any) => this.connected),
+            tap(this.connectedCallback),
+            catchError(this.connectionErrorCallback)
+        );
     }
 
     private initConnection() {
@@ -283,7 +277,7 @@ export class HubService {
      */
     public disconnect(): Observable<boolean> {
         // connection.stop just returns the connection object, so map it to this.connected when it completes
-        return Observable.fromPromise<boolean>(this._connection.stop()).map((value: any) => this.connected);
+        return from<boolean>(this._connection.stop()).pipe(map((value: any) => this.connected));
     }
 
     /**
@@ -304,7 +298,7 @@ export class HubService {
     private connectionErrorCallback = (err: any, caught: Observable<any>): Observable<boolean> => {
         this._errorConnecting = true;
         this.disconnectedEmitter.emit(this.connected);
-        return Observable.of(false);
+        return of(false);
     }
 
     /**
@@ -394,25 +388,26 @@ export class HubService {
         }
         if (this.reconnectingObservable != null) {
             // We're reconnecting, so wait on that, then invoke our method
-            return this.reconnectingObservable.flatMap((connected: boolean) => {
+            return this.reconnectingObservable.pipe(flatMap((connected: boolean) => {
                 if (!connected) {
                     return Observable.throw("SignalR disconnected");
                 } else {
-                    return Observable.fromPromise<T>(hubContainer.hubProxy.invoke(method, ...args));
+                    return from<T>(hubContainer.hubProxy.invoke(method, ...args));
                 }
-            });
+            }));
         } else {
             // We're not reconnecting, so try to invoke our method
-            return Observable.fromPromise<T>(hubContainer.hubProxy.invoke(method, ...args))
-                .catch((err: any) => {
+            return from<T>(hubContainer.hubProxy.invoke(method, ...args)).pipe(
+                catchError((err: any) => {
                     // We lost connection in the middle of the call? wait for reconnecting and send again then.
                     if (this.reconnectingObservable != null) {
-                        return this.invoke(hubName, method, args);
+                        return this.invoke<T>(hubName, method, args);
                     } else {
                         // Let the caller handle it.
-                        return Observable.throw(err);
+                        return throwError(err);
                     }
-                });
+                })
+            );
         }
     }
 
