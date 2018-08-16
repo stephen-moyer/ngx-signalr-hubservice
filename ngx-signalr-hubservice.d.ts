@@ -1,4 +1,4 @@
-import { Observable } from 'rxjs';
+import { Observable } from "rxjs";
 /** Properties for the hub you're connecting to. hubName is required */
 export declare type HubProperties = {
     /**
@@ -24,12 +24,12 @@ export declare type HubProperties = {
  * If your service is referenced in an external module, you have to reference it somewhere in your main/core code.
  * @param hubProperties the properties for this class's subscription to the hub
  */
-export declare function Hub(hubProperties: HubProperties): (target: Function) => void;
+export declare function Hub(hubProperties: HubProperties): Function;
 /**
  * Subscribes to a hub event
  * @param the event to subscribe to. if null, it uses the method name
  */
-export declare function HubSubscription(eventName?: string): (target: Object, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) => void;
+export declare function HubSubscription(eventName?: string): Function;
 /** A wrapper around the hub registration that lets us invoke methods on the hub and keep our "this" reference on responses */
 export declare type HubWrapper = {
     invoke: <T>(method: string, ...args: any[]) => Observable<T>;
@@ -107,9 +107,9 @@ export declare class HubService {
      * @param options Options to use for the connection
      */
     connect(options?: HubServiceOptions): Observable<boolean>;
-    private _connect(ignoreReconnecting);
-    private initConnection();
-    private matchesGroup(hubGroups);
+    private _connect;
+    private initConnection;
+    private matchesGroup;
     /**
      * Disconnects from the signalr server, and pushes out the disconnected event
      */
@@ -118,7 +118,7 @@ export declare class HubService {
      * Subscribe to the reconnected event
      * @param generatorOrNext callback for when we get reconnected to signalr
      */
-    onConnected(generatorOrNext: any): any;
+    onConnected(generatorOrNext: any): boolean;
     private connectedCallback;
     private connectionErrorCallback;
     /**
@@ -142,8 +142,8 @@ export declare class HubService {
     /**
      * Attemps to reconnect
      */
-    private tryReconnect();
-    private static delay(ms);
+    private tryReconnect;
+    private static delay;
     /**
      * Calls the method on the server with the provided arguments.
      * If the hub connection is disconnected, the message will queue up and send when it reconnects.
@@ -170,10 +170,10 @@ export declare class HubService {
      * @param subscription The subscription name(event name)
      * @param args The arguments from the hub
      */
-    private hubMessageReceived(hub, subscription, args);
+    private hubMessageReceived;
     /**
      * Creates a hub proxy and registers the subscriptions on it
      * @param properties the properties for the hub
      */
-    private createHubProxy(properties);
+    private createHubProxy;
 }

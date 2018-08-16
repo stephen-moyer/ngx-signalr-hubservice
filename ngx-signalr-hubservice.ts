@@ -1,14 +1,16 @@
-import { Component, Injectable, EventEmitter, NgZone } from '@angular/core';
-import { Observable, Subject, from, of, throwError } from 'rxjs';
+import { Component, Injectable, EventEmitter, NgZone } from "@angular/core";
+import { Observable, Subject, from, of, throwError } from "rxjs";
 
-import { map, tap, catchError, flatMap } from 'rxjs/operators';
+import { map, tap, catchError, flatMap } from "rxjs/operators";
 
 declare var $: any;
 declare var Reflect: any;
 
-//all the hubs/events we have to subscribe to when setting up the connection.
-//signalr requires you to connect to all the hubs before making the connection
-//so we store them in a global var. 
+/**
+ * All the hubs/events we have to subscribe to when setting up the connection.
+ * signalr requires you to connect to all the hubs before making the connection
+ * so we store them in a global var.
+ */
 const allHubProperties: HubProperties[] = [];
 
 /** Properties for the hub you're connecting to. hubName is required */
@@ -40,8 +42,8 @@ export type HubProperties = {
  * @param target The target class
  * @param hubProperties The properties to define for the class.
  */
-function getOrCreateHubProperties(target: any, hubProperties: HubProperties) {
-    let properties = <HubProperties>Reflect.getMetadata("Hub", target);
+function getOrCreateHubProperties(target: any, hubProperties: HubProperties): HubProperties {
+    let properties: HubProperties = <HubProperties>Reflect.getMetadata("Hub", target);
     if (!properties) {
         properties = hubProperties;
         Reflect.defineMetadata("Hub", hubProperties, target);
@@ -64,33 +66,33 @@ function getOrCreateHubProperties(target: any, hubProperties: HubProperties) {
  * If your service is referenced in an external module, you have to reference it somewhere in your main/core code.
  * @param hubProperties the properties for this class's subscription to the hub
  */
-export function Hub(hubProperties: HubProperties) {
-    return function (target: Function) {
+export function Hub(hubProperties: HubProperties): Function {
+    return function (target: Function): void {
         hubProperties = getOrCreateHubProperties(target.prototype, hubProperties);
-        let existing = allHubProperties.find(props => props.hubName === hubProperties.hubName);
+        let existing: HubProperties = allHubProperties.find(props => props.hubName === hubProperties.hubName);
         if (existing) {
             existing.subscriptions.push(...hubProperties.subscriptions);
             return;
         }
         allHubProperties.push(hubProperties);
-    }
+    };
 }
 
 /**
  * Subscribes to a hub event
  * @param the event to subscribe to. if null, it uses the method name
  */
-export function HubSubscription(eventName?: string) {
-    return function (target: Object, // The prototype of the class
-        propertyKey: string, // The name of the method
-        descriptor: TypedPropertyDescriptor<any>) {
+export function HubSubscription(eventName?: string): Function {
+    return function (target: Object, // the prototype of the class
+        propertyKey: string, // the name of the method
+        descriptor: TypedPropertyDescriptor<any>): void {
         eventName = eventName || propertyKey;
-        let hubProperties = getOrCreateHubProperties(target, { hubName: null });
+        let hubProperties: HubProperties = getOrCreateHubProperties(target, { hubName: null });
         hubProperties.subscriptions.push({
             eventName: eventName,
             functionName: propertyKey
         });
-    }
+    };
 }
 
 /** A wrapper around the hub registration that lets us invoke methods on the hub and keep our "this" reference on responses */
@@ -110,11 +112,15 @@ export type HubServiceOptions = {
     qs?: string;
     /** The hub groups this connection should se */
     hubGroups?: string | string[];
-}
+};
 
-// Some helper types. not exposed outside of this class.
+// some helper types. not exposed outside of this class.
 type eventType = { thisObj: any, callback: Function };
 type eventsType = { [key: string]: eventType[] };
+type hubProxyWrapper = {
+    hubProxy: any,
+    events: eventsType
+};
 
 /**
  * Manages a connection to a signalr service, and provides easy access to its hubs and their events
@@ -167,27 +173,24 @@ export class HubService {
      * callbacks that we're going to push out events to
      */
     private hubProxies: {
-        [key: string]: {
-            hubProxy: any,
-            events: eventsType
-        };
+        [key: string]: hubProxyWrapper;
     };
 
-    get connection() {
+    get connection(): any {
         return this._connection;
     }
 
     /**
      * Is the client connected?
      */
-    get connected() {
+    get connected(): boolean {
         return this._connection !== null && this._connection.state === $.signalR.connectionState.connected;
     }
 
     /**
      * Was there an error connecting to the server?
      */
-    get errorConnecting() {
+    get errorConnecting(): boolean {
         return this._errorConnecting;
     }
 
@@ -199,14 +202,14 @@ export class HubService {
     public connect(options: HubServiceOptions = {}): Observable<boolean> {
         this.options = {
             url: "/signalr",
-            attemptReconnects: false, 
-            ...options 
+            attemptReconnects: false,
+            ...options
         };
         return this._connect(false);
     }
 
-    private _connect(ignoreReconnecting: boolean) {
-        // If user calls connect while we're trying to reconnect, just give them that observable
+    private _connect(ignoreReconnecting: boolean): Observable<boolean> {
+        // if user calls connect while we're trying to reconnect, just give them that observable
         if (!ignoreReconnecting && this.reconnectingObservable != null) {
             return this.reconnectingObservable.asObservable();
         }
@@ -221,20 +224,20 @@ export class HubService {
         );
     }
 
-    private initConnection() {
-        // Initialize signalr data structures
+    private initConnection(): void {
+        // initialize signalr data structures
         this.hubProxies = {};
         this._connection = $.hubConnection(this.options.url, { useDefaultPath: false });
         this._connection.qs = this.options.qs;
         this._connection.logging = false;
 
-        // We have to create the hub proxies and subscribe to events before connecting
+        // we have to create the hub proxies and subscribe to events before connecting
         for (var properties of allHubProperties) {
-            // Make sure we match this group
-            if (!this.matchesGroup(properties.hubGroups))
+            // make sure we match this group
+            if (!this.matchesGroup(properties.hubGroups)) {
                 continue;
-            
-            // We do, so create the proxy.
+            }
+            // we do, so create the proxy.
             this.hubProxies[properties.hubName] = this.createHubProxy(properties);
         }
 
@@ -245,31 +248,35 @@ export class HubService {
         this._connection.disconnected(this.disconnectedCallback);
         this._connection.reconnected(this.reconnectedCallback);
         this._connection.reconnecting(this.recconectingCallback);
-        this._connection.stateChanged(function (change: any) {
+        this._connection.stateChanged(function (change: any): void {
             this.signalRState = change.newState;
         });
     }
 
-    private matchesGroup(hubGroups: string | string[]) {
-        // If one is null and the other isn't assume we don't match.
-        if (this.options.hubGroups == null && hubGroups != null)
+    private matchesGroup(hubGroups: string | string[]): boolean {
+        // if one is null and the other isn't assume we don't match.
+        if (this.options.hubGroups == null && hubGroups != null) {
             return false;
-        if (hubGroups == null && this.options.hubGroups != null)
+        }
+        if (hubGroups == null && this.options.hubGroups != null) {
             return false;
-        
-        // If both null then assume match.
-        if (hubGroups == null && this.options.hubGroups == null)
+        }
+        // if both null then assume match.
+        if (hubGroups == null && this.options.hubGroups == null) {
             return true;
+        }
 
-        // Just force arrays here to simplify the logic.
-        if (!Array.isArray(hubGroups))
+        // just force arrays here to simplify the logic.
+        if (!Array.isArray(hubGroups)) {
             hubGroups = [ hubGroups ];
-        if (!Array.isArray(this.options.hubGroups))
+        }
+        if (!Array.isArray(this.options.hubGroups)) {
             this.options.hubGroups = [ this.options.hubGroups ];
-        
-        // Check for at least one match.
-        var ourGroups = <string[]> this.options.hubGroups;
-        return hubGroups.some(group => ourGroups.some(ourGroup => group == ourGroup));
+        }
+
+        // check for at least one match.
+        var ourGroups: string[] = <string[]> this.options.hubGroups;
+        return hubGroups.some(group => ourGroups.some(ourGroup => group === ourGroup));
     }
 
     /**
@@ -284,17 +291,17 @@ export class HubService {
      * Subscribe to the reconnected event
      * @param generatorOrNext callback for when we get reconnected to signalr
      */
-    public onConnected(generatorOrNext: any) {
+    public onConnected(generatorOrNext: any): boolean {
         return this.connectedEmitter.subscribe(generatorOrNext);
     }
 
-    // This gets called from within the signalr instance so we have to make it a scoped method on the hubservice 
+    // this gets called from within the signalr instance so we have to make it a scoped method on the hubservice
     private connectedCallback = () => {
         this._errorConnecting = !this.connected;
         this.connectedEmitter.emit(this.connected);
     }
 
-    // This gets called from within the signalr instance so we have to make it a scoped method on the hubservice 
+    // this gets called from within the signalr instance so we have to make it a scoped method on the hubservice
     private connectionErrorCallback = (err: any, caught: Observable<any>): Observable<boolean> => {
         this._errorConnecting = true;
         this.disconnectedEmitter.emit(this.connected);
@@ -305,11 +312,11 @@ export class HubService {
      * Subscribe to the reconnected event
      * @param generatorOrNext callback for when we get reconnected to signalr
      */
-    public onReconnected(generatorOrNext: any) {
+    public onReconnected(generatorOrNext: any): any {
         return this.reconnectedEmitter.subscribe(generatorOrNext);
     }
 
-    // This gets called from within the signalr instance so we have to make it a scoped method on the hubservice 
+    // this gets called from within the signalr instance so we have to make it a scoped method on the hubservice
     private reconnectedCallback = () => {
         this.reconnectedEmitter.emit(this.connected);
         this.connectedEmitter.emit(this.connected);
@@ -321,11 +328,11 @@ export class HubService {
      * Subscribe to the reconnecting event
      * @param generatorOrNext callback for when we get the reconnecting event from signalr
      */
-    public onReconnecting(generatorOrNext: any) {
+    public onReconnecting(generatorOrNext: any): any {
         return this.reconnectingEmitter.subscribe(generatorOrNext);
     }
 
-    // This gets called from within the signalr instance so we have to make it a scoped method on the hubservice 
+    // this gets called from within the signalr instance so we have to make it a scoped method on the hubservice
     private recconectingCallback = () => {
         this.reconnectingEmitter.emit();
         this.reconnectingObservable = new Subject<boolean>();
@@ -335,11 +342,11 @@ export class HubService {
      * Subscribe to the disconnected event
      * @param generatorOrNext callback for when we get disconnected from signalr
      */
-    public onDisconnected(generatorOrNext: any) {
+    public onDisconnected(generatorOrNext: any): any {
         return this.disconnectedEmitter.subscribe(generatorOrNext);
     }
 
-    // This gets called from within the signalr instance so we have to make it a scoped method on the hubservice 
+    // this gets called from within the signalr instance so we have to make it a scoped method on the hubservice
     private disconnectedCallback = () => {
         if (this.tryingReconnect) {
             return;
@@ -353,10 +360,10 @@ export class HubService {
     /**
      * Attemps to reconnect
      */
-    private tryReconnect() {
+    private tryReconnect(): void {
         this.tryingReconnect = true;
         this.reconnectingObservable = new Subject<boolean>();
-        //try to reconnect forever.
+        // try to reconnect forever.
         this._connect(this.options.attemptReconnects).subscribe(async (connected: boolean) => {
             if (!connected) {
                 await HubService.delay(1000);
@@ -382,12 +389,12 @@ export class HubService {
      * @param args The arguments to send to the hub
      */
     public invoke<T>(hubName: string, method: string, ...args: any[]): Observable<T> {
-        let hubContainer = this.hubProxies[hubName];
+        let hubContainer: hubProxyWrapper = this.hubProxies[hubName];
         if (hubContainer == null) {
             throw new Error(`Invalid hub name ${hubName}`);
         }
         if (this.reconnectingObservable != null) {
-            // We're reconnecting, so wait on that, then invoke our method
+            // we're reconnecting, so wait on that, then invoke our method
             return this.reconnectingObservable.pipe(flatMap((connected: boolean) => {
                 if (!connected) {
                     return Observable.throw("SignalR disconnected");
@@ -396,14 +403,14 @@ export class HubService {
                 }
             }));
         } else {
-            // We're not reconnecting, so try to invoke our method
+            // we're not reconnecting, so try to invoke our method
             return from<T>(hubContainer.hubProxy.invoke(method, ...args)).pipe(
                 catchError((err: any) => {
-                    // We lost connection in the middle of the call? wait for reconnecting and send again then.
+                    // we lost connection in the middle of the call? wait for reconnecting and send again then.
                     if (this.reconnectingObservable != null) {
                         return this.invoke<T>(hubName, method, args);
                     } else {
-                        // Let the caller handle it.
+                        // let the caller handle it.
                         return throwError(err);
                     }
                 })
@@ -418,34 +425,35 @@ export class HubService {
      * @param instance The class to register with the hub service
      */
     public register(instance: any): HubWrapper {
-        let hubProperties = <HubProperties>Reflect.getMetadata("Hub", instance);
+        let hubProperties: HubProperties = <HubProperties>Reflect.getMetadata("Hub", instance);
         if (!hubProperties) {
             throw new Error("You must call register with an instance of a class with the @Hub decorator on it. Instance: " + instance);
         }
 
-        let hubWrapper = {
+        let hubWrapper: HubWrapper = {
             invoke: <T>(method: string, ...args: any[]) => this.invoke<T>(hubProperties.hubName, method, ...args),
             hub: <any> null,
             unregister: () => this.unregister(instance)
         };
 
-        if (hubProperties.subscriptions.length == 0) {
-            // Signalr ignores hubs with no events(I assume you'd just want to use a POST then). Worth erroring out here.
+        if (hubProperties.subscriptions.length === 0) {
+            // signalr ignores hubs with no events(I assume you'd just want to use a POST then). Worth erroring out here.
             throw new Error(`Hub ${hubProperties.hubName} must have at least one event subscription.`);
         }
 
-        // Allows the caller to register to hubs before actually connecting.
+        // allows the caller to register to hubs before actually connecting.
         if (this.hubProxies === void 0) {
             this.deferredRegistrations.push(instance);
-            //doesn't matter if were not registered yet we can still return this object because the user shouldn't use it until they call connect()
+            // doesn't matter if were not registered yet we can still return this object
+            // because the user shouldn't use it until they call connect()
             return hubWrapper;
         }
 
-        // Get the hub proxy and set its hub instance if it's not set.
-        let hubProxy = this.hubProxies[hubProperties.hubName];
+        // get the hub proxy and set its hub instance if it's not set.
+        let hubProxy: hubProxyWrapper = this.hubProxies[hubProperties.hubName];
 
         if (hubProxy == null) {
-            // Only throw the invalid hub error if it matches this connections group.
+            // only throw the invalid hub error if it matches this connections group.
             if (!this.matchesGroup(hubProperties.hubGroups)) {
                 return;
             }
@@ -455,14 +463,14 @@ export class HubService {
             hubWrapper.hub = hubProxy.hubProxy;
         }
 
-        // Subscribe to all the events
+        // subscribe to all the events
         for (let subscription of hubProperties.subscriptions) {
-            // If the method for this subscription isn't defined skip it
+            // if the method for this subscription isn't defined skip it
             if (!(subscription.functionName in instance)) {
                 console.warn(`${instance} is subscribing to event ${subscription} but has no matching method. Skipping subscription.`);
                 continue;
             }
-            // Adds a ref to the method on the instance to the list of events for this hub+event pairing
+            // adds a ref to the method on the instance to the list of events for this hub+event pairing
             hubProxy.events[subscription.eventName].push({
                 thisObj: instance,
                 callback: instance[subscription.functionName]
@@ -471,26 +479,26 @@ export class HubService {
 
         return hubWrapper;
     }
-    
+
     /**
      * Unregisters the instance from events.
      * @param instance the class instance to unregister
      */
     public unregister(instance: any): void {
-        let hubProperties = <HubProperties>Reflect.getMetadata("Hub", instance);
+        let hubProperties: HubProperties = <HubProperties>Reflect.getMetadata("Hub", instance);
         if (!hubProperties) {
             throw new Error("You must call unregister with an instance of a class with the @Hub decorator on it. Instance: " + instance);
         }
 
-        let proxy = this.hubProxies[hubProperties.hubName];
+        let proxy: hubProxyWrapper = this.hubProxies[hubProperties.hubName];
         for (let subscription of hubProperties.subscriptions) {
-            let events = proxy.events[subscription.eventName];
+            let events: eventType[] = proxy.events[subscription.eventName];
             if (events == null) {
                 continue;
             }
-            for (let i = events.length - 1; i >= 0; i--) {
-                let event = events[i];
-                if (event.thisObj != instance) {
+            for (let i: number = events.length - 1; i >= 0; i--) {
+                let event: eventType = events[i];
+                if (event.thisObj !== instance) {
                     continue;
                 }
                 events.splice(i, 1);
@@ -504,13 +512,13 @@ export class HubService {
      * @param subscription The subscription name(event name)
      * @param args The arguments from the hub
      */
-    private hubMessageReceived(hub: string, subscription: { eventName: string, functionName: string }, args: IArguments) {
+    private hubMessageReceived(hub: string, subscription: { eventName: string, functionName: string }, args: IArguments): void {
         if (!(hub in this.hubProxies)) {
             return;
         }
-        let events = this.hubProxies[hub].events[subscription.eventName];
+        let events: eventType[] = this.hubProxies[hub].events[subscription.eventName];
         for (let func of events) {
-            // Wrap all the callbacks in a try/catch so they don't break other callbacks if one fails.
+            // wrap all the callbacks in a try/catch so they don't break other callbacks if one fails.
             try {
                 func.callback.apply(func.thisObj, args);
             } catch (err) {
@@ -523,20 +531,20 @@ export class HubService {
      * Creates a hub proxy and registers the subscriptions on it
      * @param properties the properties for the hub
      */
-    private createHubProxy(properties: HubProperties) {
-        let hubProxy = this._connection.createHubProxy(properties.hubName);
+    private createHubProxy(properties: HubProperties): hubProxyWrapper {
+        let hubProxy: any = this._connection.createHubProxy(properties.hubName);
         let events: eventsType = {};
-        let _this_ = this;
+        let _this_: HubService = this;
         for (let subscription of properties.subscriptions) {
-            // Don't resubscribe to events.
+            // don't resubscribe to events.
             if (subscription.eventName in events) {
                 continue;
             }
             events[subscription.eventName] = [];
-            // This method actually subscribes to the hub function.
-            // We only subscribe once then push out the message to all subscribers
-            hubProxy.on(subscription.eventName, function () {
-                // We lose the "this" context with the jquery promise, so we have to store it as _this_.
+            // this method actually subscribes to the hub function.
+            // we only subscribe once then push out the message to all subscribers
+            hubProxy.on(subscription.eventName, function (): void {
+                // we lose the "this" context with the jquery promise, so we have to store it as _this_.
                 _this_.hubMessageReceived(properties.hubName, subscription, arguments);
             });
         }

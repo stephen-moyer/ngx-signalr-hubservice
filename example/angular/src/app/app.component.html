@@ -1,0 +1,23 @@
+<div style="text-align:center">
+  <h1>
+    Welcome to the chat
+  </h1>
+  <div *ngIf="!connected && !connecting">
+    Error connecting to the chat!
+  </div>
+  <div *ngIf="connecting">
+    Connecting to the chat
+  </div>
+  <div *ngIf="connected && !enteredName">
+    Enter your name: <input [(ngModel)]="username" width="50" type="text"/> <button (click)="enteredName = true;">Enter</button>
+  </div>
+  <div *ngIf="connected && enteredName">
+    <div style="margin-left: auto; margin-right: auto; width: 250px; height: 250px; text-align: left; overflow-y: auto;">
+      <span *ngFor="let message of messages;">
+        {{message.username}}: {{message.message}}
+        <br/>
+      </span>
+    </div>
+    <input [(ngModel)]="message" [disabled]="sending" width="50" type="text"/> <button [disabled]="sending" (click)="sendMessage()">Send</button>
+  </div>
+</div>

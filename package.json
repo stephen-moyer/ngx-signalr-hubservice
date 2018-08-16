@@ -1,6 +1,6 @@
 {
   "name": "ngx-signalr-hubservice",
-  "version": "6.0.1",
+  "version": "6.0.1-test",
   "description": "Makes using signalr in angular 2 easy",
   "main": "index.js",
   "scripts": {
@@ -35,7 +35,10 @@
   },
   "devDependencies": {
     "tslint": "~5.3.2",
-    "typescript": "^2.7.2"
+    "typescript": "^2.7.2",
+    "@angular/core": "^6.0.3",
+    "rxjs": "^6.2.0",
+    "zone.js": "^0.8.16"
   },
   "typings": "./ngx-signalr-hubservice.d.ts"
 }
