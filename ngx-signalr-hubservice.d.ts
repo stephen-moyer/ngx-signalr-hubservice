@@ -110,7 +110,6 @@ export declare class HubService {
     /**
      * Connects to the signalr server. Hubs are registered with the connection through
      * the @Hub decorator
-     * @param url  URL of the signalr server
      * @param options Options to use for the connection
      */
     connect(options?: HubServiceOptions): Observable<boolean>;
