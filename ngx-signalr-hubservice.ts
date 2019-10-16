@@ -1,5 +1,5 @@
-import { Component, Injectable, EventEmitter, NgZone } from "@angular/core";
-import { Observable, Subject, from, of, throwError } from "rxjs";
+import { Injectable, EventEmitter } from "@angular/core";
+import { Observable, Subject, of, throwError, from, Subscription } from "rxjs";
 
 import { map, tap, catchError, flatMap } from "rxjs/operators";
 
@@ -217,7 +217,7 @@ export class HubService {
             this.initConnection();
         }
         // this._connection.start just returns the connection object, so map it to this.connected when it completes
-        return from<boolean>(this._connection.start()).pipe(
+        return of<boolean>(this._connection.start()).pipe(
             map((value: any) => this.connected),
             tap(this.connectedCallback),
             catchError(this.connectionErrorCallback)
@@ -268,14 +268,14 @@ export class HubService {
 
         // just force arrays here to simplify the logic.
         if (!Array.isArray(hubGroups)) {
-            hubGroups = [ hubGroups ];
+            hubGroups = [hubGroups];
         }
         if (!Array.isArray(this.options.hubGroups)) {
-            this.options.hubGroups = [ this.options.hubGroups ];
+            this.options.hubGroups = [this.options.hubGroups];
         }
 
         // check for at least one match.
-        var ourGroups: string[] = <string[]> this.options.hubGroups;
+        var ourGroups: string[] = <string[]>this.options.hubGroups;
         return hubGroups.some(group => ourGroups.some(ourGroup => group === ourGroup));
     }
 
@@ -284,14 +284,14 @@ export class HubService {
      */
     public disconnect(): Observable<boolean> {
         // connection.stop just returns the connection object, so map it to this.connected when it completes
-        return from<boolean>(this._connection.stop()).pipe(map((value: any) => this.connected));
+        return of<boolean>(this._connection.stop()).pipe(map((value: any) => this.connected));
     }
 
     /**
      * Subscribe to the reconnected event
      * @param generatorOrNext callback for when we get reconnected to signalr
      */
-    public onConnected(generatorOrNext: any): boolean {
+    public onConnected(generatorOrNext: any): Subscription {
         return this.connectedEmitter.subscribe(generatorOrNext);
     }
 
@@ -395,16 +395,19 @@ export class HubService {
         }
         if (this.reconnectingObservable != null) {
             // we're reconnecting, so wait on that, then invoke our method
-            return this.reconnectingObservable.pipe(flatMap((connected: boolean) => {
-                if (!connected) {
-                    return Observable.throw("SignalR disconnected");
-                } else {
-                    return from<T>(hubContainer.hubProxy.invoke(method, ...args));
-                }
-            }));
+            return this.reconnectingObservable
+                .pipe(
+                    flatMap(
+                        (connected: boolean) => {
+                            if (!connected) {
+                                return Observable.throw("SignalR disconnected");
+                            } else {
+                                return of<T>(hubContainer.hubProxy.invoke(method, ...args));
+                            }
+                        }));
         } else {
             // we're not reconnecting, so try to invoke our method
-            return from<T>(hubContainer.hubProxy.invoke(method, ...args)).pipe(
+            return of<T>(hubContainer.hubProxy.invoke(method, ...args)).pipe(
                 catchError((err: any) => {
                     // we lost connection in the middle of the call? wait for reconnecting and send again then.
                     if (this.reconnectingObservable != null) {
@@ -432,7 +435,7 @@ export class HubService {
 
         let hubWrapper: HubWrapper = {
             invoke: <T>(method: string, ...args: any[]) => this.invoke<T>(hubProperties.hubName, method, ...args),
-            hub: <any> null,
+            hub: <any>null,
             unregister: () => this.unregister(instance)
         };
 

@@ -1,4 +1,4 @@
-import { Observable } from "rxjs";
+import { Observable, Subscription } from "rxjs";
 /** Properties for the hub you're connecting to. hubName is required */
 export declare type HubProperties = {
     /**
@@ -118,7 +118,7 @@ export declare class HubService {
      * Subscribe to the reconnected event
      * @param generatorOrNext callback for when we get reconnected to signalr
      */
-    onConnected(generatorOrNext: any): boolean;
+    onConnected(generatorOrNext: any): Subscription;
     private connectedCallback;
     private connectionErrorCallback;
     /**
