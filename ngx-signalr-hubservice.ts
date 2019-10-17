@@ -1,5 +1,5 @@
-import { Injectable, EventEmitter } from "@angular/core";
-import { Observable, Subject, of, throwError, from, Subscription } from "rxjs";
+import { Injectable } from "@angular/core";
+import { Observable, Subject, of, throwError, Subscription } from "rxjs";
 
 import { map, tap, catchError, flatMap } from "rxjs/operators";
 
@@ -83,7 +83,8 @@ export function Hub(hubProperties: HubProperties): Function {
  * @param the event to subscribe to. if null, it uses the method name
  */
 export function HubSubscription(eventName?: string): Function {
-    return function (target: Object, // the prototype of the class
+    return function (
+        target: Object, // the prototype of the class
         propertyKey: string, // the name of the method
         descriptor: TypedPropertyDescriptor<any>): void {
         eventName = eventName || propertyKey;
@@ -149,13 +150,13 @@ export class HubService {
     /** jQuery connection. */
     private _connection: any = null;
     /** emitter for connected event */
-    private connectedEmitter = new EventEmitter<boolean>();
+    private connectedEmitter = new Subject<boolean>();
     /** emitter for disconnected event */
-    private disconnectedEmitter = new EventEmitter<boolean>();
+    private disconnectedEmitter = new Subject<boolean>();
     /** emitter for reconnecting event */
-    private reconnectingEmitter = new EventEmitter<any>();
+    private reconnectingEmitter = new Subject<any>();
     /** emitter for reconnected event */
-    private reconnectedEmitter = new EventEmitter<boolean>();
+    private reconnectedEmitter = new Subject<boolean>();
     /** if there was an error connecting */
     private _errorConnecting = false;
     /** currently trying to reconnect? */
@@ -298,13 +299,13 @@ export class HubService {
     // this gets called from within the signalr instance so we have to make it a scoped method on the hubservice
     private connectedCallback = () => {
         this._errorConnecting = !this.connected;
-        this.connectedEmitter.emit(this.connected);
+        this.connectedEmitter.next(this.connected);
     }
 
     // this gets called from within the signalr instance so we have to make it a scoped method on the hubservice
     private connectionErrorCallback = (err: any, caught: Observable<any>): Observable<boolean> => {
         this._errorConnecting = true;
-        this.disconnectedEmitter.emit(this.connected);
+        this.disconnectedEmitter.next(this.connected);
         return of(false);
     }
 
@@ -318,8 +319,8 @@ export class HubService {
 
     // this gets called from within the signalr instance so we have to make it a scoped method on the hubservice
     private reconnectedCallback = () => {
-        this.reconnectedEmitter.emit(this.connected);
-        this.connectedEmitter.emit(this.connected);
+        this.reconnectedEmitter.next(this.connected);
+        this.connectedEmitter.next(this.connected);
         this.reconnectingObservable.next(this.connected);
         this.reconnectingObservable = null;
     }
@@ -334,7 +335,7 @@ export class HubService {
 
     // this gets called from within the signalr instance so we have to make it a scoped method on the hubservice
     private recconectingCallback = () => {
-        this.reconnectingEmitter.emit();
+        this.reconnectingEmitter.next();
         this.reconnectingObservable = new Subject<boolean>();
     }
 
@@ -351,7 +352,7 @@ export class HubService {
         if (this.tryingReconnect) {
             return;
         }
-        this.disconnectedEmitter.emit(this.connected);
+        this.disconnectedEmitter.next(this.connected);
         if (this.options.attemptReconnects) {
             this.tryReconnect();
         }
@@ -435,7 +436,7 @@ export class HubService {
 
         let hubWrapper: HubWrapper = {
             invoke: <T>(method: string, ...args: any[]) => this.invoke<T>(hubProperties.hubName, method, ...args),
-            hub: <any>null,
+            hub: null as any,
             unregister: () => this.unregister(instance)
         };
 
