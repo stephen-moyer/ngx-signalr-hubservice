@@ -125,19 +125,19 @@ export declare class HubService {
      * Subscribe to the reconnected event
      * @param generatorOrNext callback for when we get reconnected to signalr
      */
-    onReconnected(generatorOrNext: any): any;
+    onReconnected(generatorOrNext: any): Subscription;
     private reconnectedCallback;
     /**
      * Subscribe to the reconnecting event
      * @param generatorOrNext callback for when we get the reconnecting event from signalr
      */
-    onReconnecting(generatorOrNext: any): any;
-    private recconectingCallback;
+    onReconnecting(generatorOrNext: any): Subscription;
+    private reconnectingCallback;
     /**
      * Subscribe to the disconnected event
      * @param generatorOrNext callback for when we get disconnected from signalr
      */
-    onDisconnected(generatorOrNext: any): any;
+    onDisconnected(generatorOrNext: any): Subscription;
     private disconnectedCallback;
     /**
      * Attemps to reconnect
