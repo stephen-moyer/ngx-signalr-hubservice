@@ -92,15 +92,15 @@ export declare class HubService {
      * callbacks that we're going to push out events to
      */
     private hubProxies;
-    readonly connection: any;
+    get connection(): any;
     /**
      * Is the client connected?
      */
-    readonly connected: boolean;
+    get connected(): boolean;
     /**
      * Was there an error connecting to the server?
      */
-    readonly errorConnecting: boolean;
+    get errorConnecting(): boolean;
     /**
      * Connects to the signalr server. Hubs are registered with the connection through
      * the @Hub decorator
