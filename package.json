@@ -37,7 +37,7 @@
     "@angular/core": "^8.2.11",
     "rxjs": "^6.5.3",
     "tslint": "^5.15.0",
-    "typescript": "^3.1.6",
+    "typescript": "^3.6.5",
     "zone.js": "^0.9.1"
   },
   "typings": "./ngx-signalr-hubservice.d.ts"
